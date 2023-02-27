@@ -10,11 +10,11 @@ import org.jetbrains.annotations.NotNull;
 public class CommandListener extends ListenerAdapter {
     private final JDA jda;
 
-    public CommandListener (JDA jda) {
+    public CommandListener(JDA jda) {
         this.jda = jda;
     }
-    public void onSlashCommandInteraction(SlashCommandInteractionEvent event)
-    {
+
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         User user = event.getUser();
         // make sure we handle the right command
         switch (event.getName()) {
@@ -22,10 +22,10 @@ public class CommandListener extends ListenerAdapter {
                 CommandList.ping(event);
                 break;
             case "addtolist":
-                CommandList.addUserToBlackList(event, user);
+                CommandList.addUserToBlackList(event);
                 break;
             case "deletefromlist":
-                CommandList.deleteUserFromList(event, user);
+                CommandList.deleteUserFromList(event);
         }
     }
 

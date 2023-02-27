@@ -1,8 +1,11 @@
 package org.boot;
+
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.backend.CommandListener;
@@ -33,10 +36,19 @@ public class Main {
 
             jda.addEventListener(commandListener);
 
+            OptionData addToListOption
+                    = new OptionData(OptionType.USER, "user", "user to be blacklisted")
+                    .setRequired(true);
+            OptionData deleteFromListOption
+                    = new OptionData(OptionType.USER, "user", "user to be freed from blacklist")
+                    .setRequired(true);
+
             jda.updateCommands().addCommands(
                     Commands.slash("ping", "Пинг бота"),
-                    Commands.slash("addtolist", "Засунуть юзера в список дебилов"),
+                    Commands.slash("addtolist", "Засунуть юзера в список дебилов")
+                            .addOptions(addToListOption),
                     Commands.slash("deletefromlist", "Высунуть юзера из списка дебилов")
+                            .addOptions(deleteFromListOption)
             ).queue();
         } catch (IOException e) {
             System.err.println(e + "Укажите bot.token в файле config.properties в src/main/resources/config.properties");
