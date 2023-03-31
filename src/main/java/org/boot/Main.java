@@ -8,7 +8,8 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
-import org.backend.CommandListener;
+import org.backend.commands.CommandListener;
+import org.springframework.boot.SpringApplication;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -18,7 +19,8 @@ public class Main {
     public static void main(String[] args) {
         Properties properties = new Properties();
         try {
-            properties.load(new FileInputStream("src/main/resources/config.properties"));
+            properties.load(new FileInputStream("src/main/resources/application.properties"));
+            //SpringApplication.run(Main.class);
             JDABuilder builder = JDABuilder.createDefault(properties.getProperty("bot.token"))
                     .enableIntents(GatewayIntent.GUILD_EMOJIS_AND_STICKERS)
                     .enableIntents(GatewayIntent.MESSAGE_CONTENT);
@@ -45,13 +47,13 @@ public class Main {
 
             jda.updateCommands().addCommands(
                     Commands.slash("ping", "Пинг бота"),
-                    Commands.slash("addtolist", "Засунуть юзера в список дебилов")
+                    Commands.slash("addtolist", "Insert user to blacklist")
                             .addOptions(addToListOption),
-                    Commands.slash("deletefromlist", "Высунуть юзера из списка дебилов")
+                    Commands.slash("deletefromlist", "Delete user from blacklist")
                             .addOptions(deleteFromListOption)
             ).queue();
         } catch (IOException e) {
-            System.err.println(e + "Укажите bot.token в файле config.properties в src/main/resources/config.properties");
+            System.err.println(e + "Укажите bot.token в файле application.properties в src/main/resources/application.properties");
         }
     }
 }

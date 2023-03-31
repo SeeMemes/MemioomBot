@@ -1,4 +1,4 @@
-package org.backend;
+package org.backend.commands;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
@@ -6,34 +6,34 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import org.backend.database.UserEntity;
+import org.backend.database.UserRepository;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class CommandList {
     private final JDA jda;
 
-    private static ArrayList<User> userBlackList = new ArrayList<>();
+    private static HashMap<User, Long> userHashMap = new HashMap<>();
 
     public CommandList(JDA jda) {
         this.jda = jda;
     }
 
-    protected static void addUserToBlackList(SlashCommandInteractionEvent event) {
-        System.out.println("addUserToBlackList");
+    protected static void addUserToBlackList(SlashCommandInteractionEvent event/*, UserRepository userRepository*/) {
         OptionMapping userOption = event.getOption("user");
         User user = userOption.getAsUser();
 
         if (event.getMember().hasPermission(Permission.ADMINISTRATOR)) {
-            if (userBlackList.contains(user)) {
+            if (userHashMap.containsKey(user)) {
                 System.err.println("User is already in BlackList");
                 event.reply("User is already in BlackList").setEphemeral(true).queue();
             } else {
-                if (userBlackList.add(user)) {
-                    event.reply("Success!").setEphemeral(false).queue();
-                } else {
-                    System.err.println("Something went wrong try again later");
-                    event.reply("Something went wrong try again later").setEphemeral(true).queue();
-                }
+                UserEntity userToAdd = new UserEntity(user);
+                //userRepository.save(userToAdd);
+                userHashMap.put(user, userToAdd.getId());
+                event.reply("Success!").setEphemeral(false).queue();
             }
         } else {
             System.err.println("No rights to add user to blacklist");
@@ -41,13 +41,14 @@ public class CommandList {
         }
     }
 
-    protected static void deleteUserFromList(SlashCommandInteractionEvent event) {
+    protected static void deleteUserFromList(SlashCommandInteractionEvent event/*, UserRepository userRepository*/) {
         OptionMapping userOption = event.getOption("user");
-
         User user = userOption.getAsUser();
 
         if (event.getMember().hasPermission(Permission.ADMINISTRATOR)) {
-            if (userBlackList.remove(user)) {
+            if (userHashMap.containsKey(user)) {
+                Long id = userHashMap.get(user);
+                //userRepository.deleteById(id);
                 event.reply(event.getName() + " has been completed").setEphemeral(false).queue();
             } else {
                 event.reply("Something went wrong try again later").setEphemeral(true).queue();
@@ -66,9 +67,9 @@ public class CommandList {
     }
 
     protected static void deleteUserMessage(MessageReceivedEvent event, User user) {
-        if (userBlackList.contains(user)) {
+        if (userHashMap.containsKey(user)) {
             event.getMessage().delete().queue();
-            event.getChannel().sendMessage(user.getName() + " иди нахуй").queue();
+            event.getChannel().sendMessage(user.getName() + " today is not your day").queue();
         }
     }
 }

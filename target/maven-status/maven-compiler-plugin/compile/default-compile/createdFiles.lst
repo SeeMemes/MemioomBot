@@ -1,2 +1,5 @@
 org\boot\Main.class
-org\backend\CommandList.class
+org\backend\commands\CommandListener.class
+org\backend\database\UserEntity.class
+org\backend\database\UserRepository.class
+org\backend\commands\CommandList.class
