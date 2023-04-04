@@ -5,30 +5,34 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import org.backend.commands.CommandList;
-import org.backend.database.UserRepository;
+//import org.backend.database.UserRepository;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+@Service
 public class CommandListener extends ListenerAdapter {
-    private final JDA jda;
+
+    private final CommandList commandList;
+
+    //@Autowired
+    //UserRepository userRepository;
 
     public CommandListener(JDA jda) {
-        this.jda = jda;
+        commandList = new CommandList(jda);
     }
 
-    @Bean
-    public void onSlashCommandInteraction(SlashCommandInteractionEvent event/*, UserRepository userRepository*/) {
-        User user = event.getUser();
+    @Override
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         switch (event.getName()) {
             case "ping":
-                CommandList.ping(event);
+                commandList.ping(event);
                 break;
             case "addtolist":
-                CommandList.addUserToBlackList(event/*, userRepository*/);
+                commandList.addUserToBlackList(event/*, userRepository*/);
                 break;
             case "deletefromlist":
-                CommandList.deleteUserFromList(event/*, userRepository*/);
+                commandList.deleteUserFromList(event/*, userRepository*/);
                 break;
         }
     }
@@ -38,6 +42,6 @@ public class CommandListener extends ListenerAdapter {
         String message = event.getMessage().getContentRaw();
         User user = event.getAuthor();
 
-        CommandList.deleteUserMessage(event, user);
+        commandList.deleteUserMessage(event, user);
     }
 }

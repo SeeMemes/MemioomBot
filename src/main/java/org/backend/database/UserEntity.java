@@ -1,4 +1,4 @@
-package org.backend.database;
+/*package org.backend.database;
 
 import net.dv8tion.jda.api.entities.User;
 
@@ -7,7 +7,7 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "blacklistUsers")
+//@Table(name = "blacklistUsers")
 public class UserEntity {
     @Id
     private Long id;
@@ -36,3 +36,4 @@ public class UserEntity {
         uDiscriminator = user.getDiscriminator();
     }
 }
+*/

@@ -6,22 +6,21 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.backend.database.UserEntity;
-import org.backend.database.UserRepository;
+//import org.backend.database.UserEntity;
+//import org.backend.database.UserRepository;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 public class CommandList {
     private final JDA jda;
 
-    private static HashMap<User, Long> userHashMap = new HashMap<>();
+    private HashMap<User, Long> userHashMap = new HashMap<>();
 
     public CommandList(JDA jda) {
         this.jda = jda;
     }
 
-    protected static void addUserToBlackList(SlashCommandInteractionEvent event/*, UserRepository userRepository*/) {
+    protected void addUserToBlackList(SlashCommandInteractionEvent event/*, UserRepository userRepository*/) {
         OptionMapping userOption = event.getOption("user");
         User user = userOption.getAsUser();
 
@@ -30,9 +29,9 @@ public class CommandList {
                 System.err.println("User is already in BlackList");
                 event.reply("User is already in BlackList").setEphemeral(true).queue();
             } else {
-                UserEntity userToAdd = new UserEntity(user);
+                //UserEntity userToAdd = new UserEntity(user);
                 //userRepository.save(userToAdd);
-                userHashMap.put(user, userToAdd.getId());
+                userHashMap.put(user, 1L/*userToAdd.getId()*/);
                 event.reply("Success!").setEphemeral(false).queue();
             }
         } else {
@@ -41,7 +40,7 @@ public class CommandList {
         }
     }
 
-    protected static void deleteUserFromList(SlashCommandInteractionEvent event/*, UserRepository userRepository*/) {
+    protected void deleteUserFromList(SlashCommandInteractionEvent event/*, UserRepository userRepository*/) {
         OptionMapping userOption = event.getOption("user");
         User user = userOption.getAsUser();
 
@@ -49,6 +48,7 @@ public class CommandList {
             if (userHashMap.containsKey(user)) {
                 Long id = userHashMap.get(user);
                 //userRepository.deleteById(id);
+                userHashMap.remove(user);
                 event.reply(event.getName() + " has been completed").setEphemeral(false).queue();
             } else {
                 event.reply("Something went wrong try again later").setEphemeral(true).queue();
@@ -58,7 +58,7 @@ public class CommandList {
         }
     }
 
-    protected static void ping(SlashCommandInteractionEvent event) {
+    protected void ping(SlashCommandInteractionEvent event) {
         long time = System.currentTimeMillis();
         event.reply("Pong!").setEphemeral(false) // reply or acknowledge
                 .flatMap(v ->
@@ -66,7 +66,7 @@ public class CommandList {
                 ).queue(); // Queue both reply and edit
     }
 
-    protected static void deleteUserMessage(MessageReceivedEvent event, User user) {
+    protected void deleteUserMessage(MessageReceivedEvent event, User user) {
         if (userHashMap.containsKey(user)) {
             event.getMessage().delete().queue();
             event.getChannel().sendMessage(user.getName() + " today is not your day").queue();
