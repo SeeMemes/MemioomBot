@@ -1,4 +1,1 @@
-org\boot\MemioomBot.class
-org\backend\commands\CommandListener.class
-org\boot\SpringApp.class
-org\backend\commands\CommandList.class
+org\backend\database\UserRepository.class

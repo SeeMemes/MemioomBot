@@ -1,4 +1,4 @@
-/*package org.backend.database;
+package org.backend.database;
 
 import net.dv8tion.jda.api.entities.User;
 
@@ -36,4 +36,3 @@ public class UserEntity {
         uDiscriminator = user.getDiscriminator();
     }
 }
-*/

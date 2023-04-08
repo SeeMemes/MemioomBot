@@ -12,14 +12,17 @@ import org.backend.commands.CommandListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 @Configuration
+@PropertySource("classpath:application.properties")
 public class MemioomBot {
     @Value("${token}")
     private String token;
 
     @Bean
     public JDA runApp() throws InterruptedException {
+
         JDABuilder builder = JDABuilder.createDefault(token)
                 .enableIntents(GatewayIntent.GUILD_EMOJIS_AND_STICKERS)
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT);
