@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="ydb-jdbc-driver-2.0.0-RC1-full">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/ydb-jdbc-driver-2.0.0-RC1-full.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -20,7 +20,7 @@
 
     <logger name="com.example" level="debug"/>
 
-    <root level="info">
+    <root level="stacktrace">
         <appender-ref ref="console"/>
         <appender-ref ref="file"/>
     </root>

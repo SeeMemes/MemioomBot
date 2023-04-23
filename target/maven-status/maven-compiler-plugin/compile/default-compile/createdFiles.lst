@@ -1,1 +1,6 @@
-org\backend\database\UserRepository.class
+memioombot\backend\database\repositories\UserRepository.class
+memioombot\boot\MemioomBot.class
+memioombot\backend\commands\CommandListener.class
+memioombot\backend\database\entities\UserEntity.class
+memioombot\backend\commands\CommandList.class
+memioombot\boot\SpringApp.class
