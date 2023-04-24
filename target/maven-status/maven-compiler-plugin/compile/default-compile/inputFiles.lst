@@ -1,6 +1,7 @@
-C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\boot\SpringApp.java
+C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\backend\SpringApp.java
+C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\backend\boot\MemioomBot.java
 C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\backend\commands\CommandListener.java
+C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\backend\database\ydbdriver\YdbConfig.java
 C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\backend\database\entities\UserEntity.java
-C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\boot\MemioomBot.java
 C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\backend\database\repositories\UserRepository.java
 C:\Users\User\Desktop\MemioomBot\src\main\java\memioombot\backend\commands\CommandList.java

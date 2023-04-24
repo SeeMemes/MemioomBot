@@ -8,19 +8,21 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import memioombot.backend.database.entities.UserEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 
+@Service
 public class CommandList {
-    private final JDA jda;
+
+    @Autowired private UserRepository userRepository;
 
     private HashMap<User, Long> userHashMap = new HashMap<>();
 
-    public CommandList(JDA jda) {
-        this.jda = jda;
-    }
+    public CommandList() {}
 
-    protected void addUserToBlackList(SlashCommandInteractionEvent event, UserRepository userRepository) {
+    protected void addUserToBlackList(SlashCommandInteractionEvent event) {
         OptionMapping userOption = event.getOption("user");
         User user = userOption.getAsUser();
 
@@ -40,7 +42,7 @@ public class CommandList {
         }
     }
 
-    protected void deleteUserFromList(SlashCommandInteractionEvent event, UserRepository userRepository) {
+    protected void deleteUserFromList(SlashCommandInteractionEvent event) {
         OptionMapping userOption = event.getOption("user");
         User user = userOption.getAsUser();
 

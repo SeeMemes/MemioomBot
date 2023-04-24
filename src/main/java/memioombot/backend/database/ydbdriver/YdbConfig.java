@@ -8,8 +8,6 @@ import tech.ydb.core.grpc.GrpcTransport;
 import tech.ydb.table.SessionRetryContext;
 import tech.ydb.table.TableClient;
 
-import java.io.IOException;
-
 @Configuration
 @PropertySource("classpath:application.properties")
 public class YdbConfig {
@@ -27,12 +25,14 @@ public class YdbConfig {
     }
 
     @Bean
-    public TableClient tableSetup() {
-        return TableClient.newClient(grpcTransportSetup()).build();
+    public TableClient tableSetup(GrpcTransport grpcTransport) {
+        return TableClient.newClient(grpcTransport)
+                .build();
     }
 
     @Bean
-    public SessionRetryContext sessionSetup() {
-        return SessionRetryContext.create(tableSetup()).build();
+    public SessionRetryContext sessionSetup(TableClient tableClient) {
+        return SessionRetryContext.create(tableClient)
+                .build();
     }
 }

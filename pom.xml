@@ -14,7 +14,7 @@
     <name>bot</name>
     <description>An experimental Discord Bot</description>
     <properties>
-        <java.version>11</java.version>
+        <java.version>1.8</java.version>
     </properties>
 
     <repositories>

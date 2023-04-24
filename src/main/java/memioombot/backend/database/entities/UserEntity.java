@@ -3,37 +3,33 @@ package memioombot.backend.database.entities;
 import net.dv8tion.jda.api.entities.User;
 
 public class UserEntity {
-    private Long id;
+    private Long uId;
     String uName;
-    String uDiscriminator;
+    Integer uDiscriminator;
 
     public UserEntity() {
     }
 
-    public UserEntity(User user){
+    public UserEntity(User user) {
+        uId = user.getIdLong();
         uName = user.getName();
-        uDiscriminator = user.getDiscriminator();
+        uDiscriminator = Integer.parseInt(user.getDiscriminator());
     }
 
-    public Long getId() {
-        return id;
+    public Long getUId() {
+        return uId;
     }
 
     public void setuInfo(User user) {
         uName = user.getName();
-        uDiscriminator = user.getDiscriminator();
-    }
-
-    public void getuInfo(User user) {
-        uName = user.getName();
-        uDiscriminator = user.getDiscriminator();
+        uDiscriminator = Integer.parseInt(user.getDiscriminator());
     }
 
     public String getuName() {
         return uName;
     }
 
-    public String getuDiscriminator() {
+    public Integer getuDiscriminator() {
         return uDiscriminator;
     }
 }

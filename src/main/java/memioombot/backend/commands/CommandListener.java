@@ -9,18 +9,15 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 //import org.backend.database.UserRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 
-@Service
+@Controller
 public class CommandListener extends ListenerAdapter {
 
-    private final CommandList commandList;
+    @Autowired private CommandList commandList;
 
-    UserRepository userRepository;
-
-    public CommandListener(JDA jda) {
-        commandList = new CommandList(jda);
-    }
+    public CommandListener() {}
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
@@ -29,10 +26,10 @@ public class CommandListener extends ListenerAdapter {
                 commandList.ping(event);
                 break;
             case "addtolist":
-                commandList.addUserToBlackList(event, userRepository);
+                commandList.addUserToBlackList(event);
                 break;
             case "deletefromlist":
-                commandList.deleteUserFromList(event, userRepository);
+                commandList.deleteUserFromList(event);
                 break;
         }
     }
