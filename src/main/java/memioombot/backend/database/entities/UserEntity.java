@@ -16,6 +16,12 @@ public class UserEntity {
         uDiscriminator = Integer.parseInt(user.getDiscriminator());
     }
 
+    public UserEntity(Long uId, String uName, int uDiscriminator) {
+        this.uId = uId;
+        this.uName = uName;
+        this.uDiscriminator = uDiscriminator;
+    }
+
     public Long getUId() {
         return uId;
     }

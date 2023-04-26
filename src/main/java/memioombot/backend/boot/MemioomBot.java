@@ -1,5 +1,6 @@
 package memioombot.backend.boot;
 
+import memioombot.backend.database.entities.UserEntity;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+
+import java.util.ArrayList;
 
 @Configuration
 @PropertySource("classpath:application.properties")
