@@ -20,13 +20,17 @@ import java.util.Optional;
 
 @Component
 public class UserRepository implements CrudRepository<UserEntity, Long> {
-    @Value("${ydb.datasource.database}") private String database;
+    @Value("${ydb.datasource.database}")
+    private String database;
 
-    @Autowired private SessionRetryContext sessionRetryContext;
+    @Autowired
+    private SessionRetryContext sessionRetryContext;
 
-    @Autowired private GrpcTransport grpcTransport;
+    @Autowired
+    private GrpcTransport grpcTransport;
 
-    @Autowired private TableClient tableClient;
+    @Autowired
+    private TableClient tableClient;
 
     @Override
     public <S extends UserEntity> S save(S entity) {
@@ -42,11 +46,8 @@ public class UserRepository implements CrudRepository<UserEntity, Long> {
                 "$uName", PrimitiveValue.newText(entity.getuName()),
                 "$uDiscriminator", PrimitiveValue.newUint8(entity.getuDiscriminator())
         );
-
         TxControl txControl = TxControl.serializableRw().setCommitTx(true);
-
         DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join().getValue();
-
         System.out.println(result);
 
         return entity;
@@ -54,17 +55,61 @@ public class UserRepository implements CrudRepository<UserEntity, Long> {
 
     @Override
     public <S extends UserEntity> Iterable<S> saveAll(Iterable<S> entities) {
-        return null;
+        ArrayList<UserEntity> savedEntities = new ArrayList<>();
+        for (UserEntity entity : entities) {
+            String query
+                    = "DECLARE $uId AS Uint64; " +
+                    "DECLARE $uName AS Text; " +
+                    "DECLARE $uDiscriminator AS Uint8; " +
+                    "UPSERT INTO " + database + " (uId, uName, uDiscriminator) " +
+                    "VALUES ($uId, $uName, $uDiscriminator); ";
+
+            Params params = Params.of(
+                    "$uId", PrimitiveValue.newUint64(entity.getUId()),
+                    "$uName", PrimitiveValue.newText(entity.getuName()),
+                    "$uDiscriminator", PrimitiveValue.newUint8(entity.getuDiscriminator())
+            );
+            TxControl txControl = TxControl.serializableRw().setCommitTx(true);
+            DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join().getValue();
+            savedEntities.add(entity);
+        }
+
+        return (Iterable<S>) savedEntities;
     }
 
     @Override
     public Optional<UserEntity> findById(Long aLong) {
-        return Optional.empty();
+        String query
+                = "SELECT * from " + database + " WHERE uId = $uId; ";
+        Params params = Params.of(
+                "$uId", PrimitiveValue.newUint64(aLong)
+        );
+        TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
+        Result<DataQueryResult> result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join();
+        ResultSetReader rs = result.getValue().getResultSet(0);
+        if (result.isSuccess()) {
+            UserEntity userEntity = new UserEntity(
+                    rs.getColumn("uId").getUint64(),
+                    rs.getColumn("uName").getText(),
+                    rs.getColumn("uDiscriminator").getUint8()
+            );
+            return Optional.of(userEntity);
+        } else {
+            return Optional.empty();
+        }
     }
 
     @Override
     public boolean existsById(Long aLong) {
-        return false;
+        String query
+                = "SELECT COUNT(*) from " + database + " WHERE uId = $uId; ";
+        Params params = Params.of(
+                "$uId", PrimitiveValue.newUint64(aLong)
+        );
+        TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
+        DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl)).join().getValue();
+
+        return result.getResultSet(0).getRowCount() > 0;
     }
 
     @Override
@@ -80,14 +125,36 @@ public class UserRepository implements CrudRepository<UserEntity, Long> {
                     rs.getColumn("uId").getUint64(),
                     rs.getColumn("uName").getText(),
                     rs.getColumn("uDiscriminator").getUint8()
-                    ));
+            ));
         }
+
         return userEntities;
     }
 
     @Override
     public Iterable<UserEntity> findAllById(Iterable<Long> longs) {
-        return null;
+
+        for (Long uId : longs) {
+            String query
+                    = "SELECT * from " + database + " WHERE uId = $uId; ";
+            Params params = Params.of(
+                    "$uId", PrimitiveValue.newUint64(uId)
+            );
+            TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
+            DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl)).join().getValue();
+            ResultSetReader rs = result.getResultSet(0);
+            ArrayList<UserEntity> userEntities = new ArrayList<>();
+            while (rs.next()) {
+                userEntities.add(new UserEntity(
+                        rs.getColumn("uId").getUint64(),
+                        rs.getColumn("uName").getText(),
+                        rs.getColumn("uDiscriminator").getUint8()
+                ));
+            }
+        }
+
+
+        return userEntities;
     }
 
     @Override
@@ -104,11 +171,8 @@ public class UserRepository implements CrudRepository<UserEntity, Long> {
         Params params = Params.of(
                 "$uId", PrimitiveValue.newUint64(aLong)
         );
-
         TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
         DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join().getValue();
-
-        System.out.println(result);
     }
 
     @Override
