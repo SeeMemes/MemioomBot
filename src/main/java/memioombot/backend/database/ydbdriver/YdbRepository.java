@@ -1,6 +1,7 @@
 package memioombot.backend.database.ydbdriver;
 
 import memioombot.backend.database.entities.UserEntity;
+import memioombot.backend.database.ydbdriver.util.YdbDatabaseInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.repository.CrudRepository;
@@ -16,6 +17,7 @@ import tech.ydb.table.result.ResultSetReader;
 import tech.ydb.table.transaction.TxControl;
 import tech.ydb.table.values.PrimitiveValue;
 
+import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -23,8 +25,9 @@ import java.util.StringJoiner;
 
 @NoRepositoryBean
 public abstract class YdbRepository implements CrudRepository<UserEntity, Long> {
-    @Value("${ydb.datasource.database}")
-    private String database;
+
+    @Autowired
+    private YdbDatabaseInfo ydbDatabaseInfo;
 
     @Autowired
     private SessionRetryContext sessionRetryContext;
@@ -36,6 +39,13 @@ public abstract class YdbRepository implements CrudRepository<UserEntity, Long> 
     private TableClient tableClient;
 
     private final TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
+
+    private String database;
+
+    @PostConstruct
+    private void completeDatabaseInfo() {
+        this.database = ydbDatabaseInfo.getDatabase();
+    }
 
     @Override
     public <S extends UserEntity> S save(S entity) {

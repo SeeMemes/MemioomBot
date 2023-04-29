@@ -1,8 +1,12 @@
 package memioombot.backend.database.entities;
 
+import memioombot.backend.database.ydbdriver.annotations.YdbEntity;
+import memioombot.backend.database.ydbdriver.annotations.YdbPrimaryKey;
 import net.dv8tion.jda.api.entities.User;
 
+@YdbEntity
 public class UserEntity {
+    @YdbPrimaryKey
     private Long uId;
     String uName;
     Integer uDiscriminator;

@@ -1,4 +1,4 @@
-package memioombot.backend.database.ydbdriver;
+package memioombot.backend.database.ydbdriver.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -10,13 +10,10 @@ import tech.ydb.table.TableClient;
 
 @Configuration
 @PropertySource("classpath:application.properties")
-public class YdbConfig {
+public class YdbConnectionConfig {
 
     @Value("${ydb.datasource.url}")
     private String endpoint;
-
-    @Value("${ydb.datasource.database}")
-    private String database;
 
     @Bean
     public GrpcTransport grpcTransportSetup() {
