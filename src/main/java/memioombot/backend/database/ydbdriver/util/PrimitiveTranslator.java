@@ -3,6 +3,9 @@ package memioombot.backend.database.ydbdriver.util;
 import memioombot.backend.database.ydbdriver.util.exceptions.VariableTypeException;
 import tech.ydb.table.values.PrimitiveType;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Types that are not presented yet
  * {@link PrimitiveType#Yson}
@@ -20,27 +23,22 @@ import tech.ydb.table.values.PrimitiveType;
  */
 
 public class PrimitiveTranslator {
-    public static PrimitiveType convertToPrimitiveType(Object value) {
-        if (value instanceof Boolean) {
-            return PrimitiveType.Bool;
-        } else if (value instanceof Byte) {
-            return PrimitiveType.Int8;
-        } else if (value instanceof Short) {
-            return PrimitiveType.Int16;
-        } else if (value instanceof Integer) {
-            return PrimitiveType.Int32;
-        } else if (value instanceof Long) {
-            return PrimitiveType.Int64;
-        } else if (value instanceof Float) {
-            return PrimitiveType.Float;
-        } else if (value instanceof Double) {
-            return PrimitiveType.Double;
-        } else if (value instanceof byte[]) {
-            return PrimitiveType.Bytes;
-        } else if (value instanceof String) {
-            return PrimitiveType.Text;
-        } else {
-            throw new VariableTypeException(value.getClass().getName());
-        }
+
+    private static final Map<Class<?>, PrimitiveType> JAVA_TO_YQL_TYPES = new HashMap<>();
+
+    static {
+        JAVA_TO_YQL_TYPES.put(Boolean.class, PrimitiveType.Bool);
+        JAVA_TO_YQL_TYPES.put(Byte.class, PrimitiveType.Int8);
+        JAVA_TO_YQL_TYPES.put(Short.class, PrimitiveType.Int16);
+        JAVA_TO_YQL_TYPES.put(Integer.class, PrimitiveType.Int32);
+        JAVA_TO_YQL_TYPES.put(Long.class, PrimitiveType.Int64);
+        JAVA_TO_YQL_TYPES.put(Float.class, PrimitiveType.Float);
+        JAVA_TO_YQL_TYPES.put(Double.class, PrimitiveType.Double);
+        JAVA_TO_YQL_TYPES.put(byte[].class, PrimitiveType.Bytes);
+        JAVA_TO_YQL_TYPES.put(String.class, PrimitiveType.Text);
+    }
+
+    public static PrimitiveType convertToPrimitiveType(Class<?> fieldType) {
+        return JAVA_TO_YQL_TYPES.get(fieldType);
     }
 }

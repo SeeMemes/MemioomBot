@@ -4,7 +4,7 @@ import memioombot.backend.database.ydbdriver.annotations.YdbEntity;
 import memioombot.backend.database.ydbdriver.annotations.YdbPrimaryKey;
 import net.dv8tion.jda.api.entities.User;
 
-@YdbEntity
+@YdbEntity(dbName = "blacklistUsers")
 public class UserEntity {
     @YdbPrimaryKey
     private Long uId;

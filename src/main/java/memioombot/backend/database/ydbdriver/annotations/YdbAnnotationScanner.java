@@ -5,6 +5,7 @@ import memioombot.backend.database.ydbdriver.util.exceptions.PrimaryKeyException
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
+import tech.ydb.core.grpc.GrpcTransport;
 import tech.ydb.table.SessionRetryContext;
 import tech.ydb.table.description.TableDescription;
 
@@ -20,6 +21,9 @@ public class YdbAnnotationScanner {
 
     @Autowired
     private SessionRetryContext sessionRetryContext;
+
+    @Autowired
+    private GrpcTransport grpcTransport;
 
     private String database;
 
@@ -48,13 +52,14 @@ public class YdbAnnotationScanner {
     }
 
     private void createTableInDatabase(String tableName, String primaryKeyName, Field[] fields) {
-        TableDescription.Builder tableBuilder = TableDescription.newBuilder().setPrimaryKey(primaryKeyName);
+        TableDescription.Builder tableBuilder = TableDescription.newBuilder();
         for (Field field : fields) {
-            tableBuilder.addNullableColumn(field.getName(), PrimitiveTranslator.convertToPrimitiveType(field));
+            tableBuilder.addNullableColumn(field.getName(), PrimitiveTranslator.convertToPrimitiveType(field.getType()));
         }
+        tableBuilder.setPrimaryKey(primaryKeyName);
         TableDescription tableToCreate = tableBuilder.build();
 
-        sessionRetryContext.supplyStatus(session -> session.createTable(tableName, tableToCreate))
+        sessionRetryContext.supplyStatus(session -> session.createTable(grpcTransport.getDatabase() + "/" + tableName, tableToCreate))
                 .join().expectSuccess("Can't create table " + tableName);
     }
 
