@@ -1,171 +1,175 @@
 package memioombot.backend.database.ydbdriver;
 
 import memioombot.backend.database.entities.UserEntity;
+import memioombot.backend.database.ydbdriver.util.PrimitiveTranslator;
 import memioombot.backend.database.ydbdriver.util.YdbDatabaseInfo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.NoRepositoryBean;
-import org.springframework.stereotype.Component;
 import tech.ydb.core.Result;
-import tech.ydb.core.grpc.GrpcTransport;
 import tech.ydb.table.SessionRetryContext;
-import tech.ydb.table.TableClient;
 import tech.ydb.table.query.DataQueryResult;
 import tech.ydb.table.query.Params;
 import tech.ydb.table.result.ResultSetReader;
 import tech.ydb.table.transaction.TxControl;
-import tech.ydb.table.values.PrimitiveValue;
+import tech.ydb.table.values.Value;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.StringJoiner;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.*;
 
 @NoRepositoryBean
-public abstract class YdbRepository implements CrudRepository<UserEntity, Long> {
+public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
 
     @Autowired
     private YdbDatabaseInfo ydbDatabaseInfo;
-
     @Autowired
     private SessionRetryContext sessionRetryContext;
-
-    @Autowired
-    private GrpcTransport grpcTransport;
-
-    @Autowired
-    private TableClient tableClient;
-
+    String entityType;
     private final TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
-
     private String database;
 
     @PostConstruct
     private void completeDatabaseInfo() {
-        this.database = ydbDatabaseInfo.getDatabase();
+        Type type = getClass().getGenericSuperclass();
+        ParameterizedType paramType = (ParameterizedType) type;
+        Type[] typeArguments = paramType.getActualTypeArguments();
+        this.entityType = typeArguments[0].getTypeName();
+        this.database = ydbDatabaseInfo.getDatabase(entityType);
     }
 
     @Override
-    public <S extends UserEntity> S save(S entity) {
+    public <S extends T> S save(S entity) {
         String query
-                = "DECLARE $uId AS Uint64; " +
-                "DECLARE $uName AS Text; " +
-                "DECLARE $uDiscriminator AS Uint8; " +
+                = "DECLARE $uId AS Int64; " +
+                "DECLARE $uName AS Utf8; " +
+                "DECLARE $uDiscriminator AS Int32; " +
                 "UPSERT INTO " + database + " (uId, uName, uDiscriminator) " +
                 "VALUES ($uId, $uName, $uDiscriminator); ";
-
-        Params params = Params.of(
-                "$uId", PrimitiveValue.newUint64(entity.getUId()),
-                "$uName", PrimitiveValue.newText(entity.getuName()),
-                "$uDiscriminator", PrimitiveValue.newUint8(entity.getuDiscriminator())
-        );
-        DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join().getValue();
-        System.out.println(result);
+        try {
+            Params params = buildClassParams(entity);
+            Result<DataQueryResult> result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join();
+            if (result.isSuccess()) return entity;
+            else return null;
+        } catch (IllegalAccessException e) {
+            System.err.println("Cannot get field in entity");
+            e.printStackTrace();
+        }
 
         return entity;
     }
 
     @Override
-    public <S extends UserEntity> Iterable<S> saveAll(Iterable<S> entities) {
-        List<UserEntity> savedEntities = new ArrayList<>();
-        for (UserEntity entity : entities) {
+    public <S extends T> Iterable<S> saveAll(Iterable<S> entities) {
+        List<S> savedEntities = new ArrayList<>();
+        for (S entity : entities) {
             String query
-                    = "DECLARE $uId AS Uint64; " +
-                    "DECLARE $uName AS Text; " +
-                    "DECLARE $uDiscriminator AS Uint8; " +
+                    = "DECLARE $uId AS Int64; " +
+                    "DECLARE $uName AS Utf8; " +
+                    "DECLARE $uDiscriminator AS Int32; " +
                     "UPSERT INTO " + database + " (uId, uName, uDiscriminator) " +
                     "VALUES ($uId, $uName, $uDiscriminator); ";
+            try {
+                Params params = buildClassParams(entity);
+                Result<DataQueryResult> result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join();
 
-            Params params = Params.of(
-                    "$uId", PrimitiveValue.newUint64(entity.getUId()),
-                    "$uName", PrimitiveValue.newText(entity.getuName()),
-                    "$uDiscriminator", PrimitiveValue.newUint8(entity.getuDiscriminator())
-            );
-            DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join().getValue();
-            savedEntities.add(entity);
+                if (result.isSuccess()) savedEntities.add(entity);
+            } catch (IllegalAccessException e) {
+                System.err.println("Cannot get field in entity");
+                e.printStackTrace();
+            }
         }
-
-        return (Iterable<S>) savedEntities;
+        return savedEntities;
     }
 
     @Override
-    public Optional<UserEntity> findById(Long aLong) {
+    public Optional<T> findById(ID id) {
         String query
-                = "SELECT * from " + database + " WHERE uId = $uId; ";
-        Params params = Params.of(
-                "$uId", PrimitiveValue.newUint64(aLong)
-        );
+                = "DECLARE $uId AS Int64; " +
+                "SELECT * from " + database + " WHERE uId = $uId; ";
+
+        //EXPERIMENTAL
+        Params params = buildIdParams(id, "$uId");
+
         Result<DataQueryResult> result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join();
         ResultSetReader rs = result.getValue().getResultSet(0);
         if (result.isSuccess()) {
+            //TO BE DONE
             UserEntity userEntity = new UserEntity(
-                    rs.getColumn("uId").getUint64(),
+                    rs.getColumn("uId").getInt64(),
                     rs.getColumn("uName").getText(),
-                    rs.getColumn("uDiscriminator").getUint8()
+                    rs.getColumn("uDiscriminator").getInt32()
             );
-            return Optional.of(userEntity);
+            return Optional.of((T) userEntity);
         } else {
             return Optional.empty();
         }
     }
 
     @Override
-    public boolean existsById(Long aLong) {
+    public boolean existsById(ID id) {
         String query
-                = "SELECT COUNT(*) from " + database + " WHERE uId = $uId; ";
-        Params params = Params.of(
-                "$uId", PrimitiveValue.newUint64(aLong)
-        );
-        DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl)).join().getValue();
+                = "DECLARE $uId AS Int64; " +
+                "SELECT COUNT(*) from " + database + " WHERE uId = $uId; ";
+
+        //EXPERIMENTAL
+        Params params = buildIdParams(id, "$uId");
+
+        DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join().getValue();
 
         return result.getResultSet(0).getRowCount() > 0;
     }
 
     @Override
-    public Iterable<UserEntity> findAll() {
+    public Iterable<T> findAll() {
         String query
                 = "SELECT * from " + database + "; ";
         DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl)).join().getValue();
         ResultSetReader rs = result.getResultSet(0);
-        List<UserEntity> userEntities = new ArrayList<>();
+        List<T> userEntities = new ArrayList<>();
         while (rs.next()) {
-            userEntities.add(new UserEntity(
-                    rs.getColumn("uId").getUint64(),
+            //TO BE DONE
+            UserEntity userEntity = new UserEntity(
+                    rs.getColumn("uId").getInt64(),
                     rs.getColumn("uName").getText(),
-                    rs.getColumn("uDiscriminator").getUint8()
-            ));
+                    rs.getColumn("uDiscriminator").getInt32()
+            );
+            userEntities.add((T) userEntity);
         }
 
         return userEntities;
     }
 
     @Override
-    public Iterable<UserEntity> findAllById(Iterable<Long> longs) {
-
+    public Iterable<T> findAllById(Iterable<ID> ids) {
         StringBuilder query = new StringBuilder();
         Params params = Params.empty();
         StringJoiner idPlaceholders = new StringJoiner(",");
         int paramID = 1;
-        for (Long uId : longs) {
+        for (ID id : ids) {
             String parameterName = "$uId" + paramID;
             idPlaceholders.add(parameterName);
-            params.put(parameterName, PrimitiveValue.newUint64(uId));
 
-            query.append("DECLARE ").append(parameterName).append(" AS Uint64;\n");
+            //EXPERIMENTAL
+            buildIdParams(id, parameterName);
+
+            query.append("DECLARE ").append(parameterName).append(" AS Int64;\n");
         }
-        query.append("SELECT * from ").append(database).append(" WHERE uId IN (").append(idPlaceholders).append("); ");
+        query.append("SELECT * FROM ").append(database).append(" WHERE uId IN (").append(idPlaceholders).append("); ");
 
         DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query.toString(), txControl, params)).join().getValue();
         ResultSetReader rs = result.getResultSet(0);
-        List<UserEntity> userEntities = new ArrayList<>();
+        List<T> userEntities = new ArrayList<>();
         while (rs.next()) {
-            userEntities.add(new UserEntity(
-                    rs.getColumn("uId").getUint64(),
+            //TO BE DONE
+            UserEntity userEntity = new UserEntity(
+                    rs.getColumn("uId").getInt64(),
                     rs.getColumn("uName").getText(),
-                    rs.getColumn("uDiscriminator").getUint8()
-            ));
+                    rs.getColumn("uDiscriminator").getInt32()
+            );
+            userEntities.add((T) userEntity);
         }
 
         return userEntities;
@@ -180,35 +184,42 @@ public abstract class YdbRepository implements CrudRepository<UserEntity, Long> 
     }
 
     @Override
-    public void deleteById(Long aLong) {
+    public void deleteById(ID id) {
         String query
-                = "DECLARE $uId AS Uint64; " +
+                = "DECLARE $uId AS Int64; " +
                 "DELETE FROM " + database + " WHERE uId = $uId; ";
 
-        Params params = Params.of(
-                "$uId", PrimitiveValue.newUint64(aLong)
-        );
+        //EXPERIMENTAL
+        Params params = buildIdParams(id, "$uId");
+
         TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
-        DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join().getValue();
+        sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl, params)).join().getValue();
     }
 
     @Override
-    public void delete(UserEntity entity) {
-        deleteById(entity.getUId());
+    public void delete(T entity) {
+        try {
+            deleteById(getId(entity));
+        } catch (IllegalAccessException e) {
+            System.err.println("Cannot get ID of entity");
+            e.printStackTrace();
+        }
     }
 
     @Override
-    public void deleteAllById(Iterable<? extends Long> longs) {
+    public void deleteAllById(Iterable<? extends ID> ids) {
         StringBuilder query = new StringBuilder();
         Params params = Params.empty();
         StringJoiner idPlaceholders = new StringJoiner(",");
         int paramID = 1;
-        for (Long uId : longs) {
+        for (ID id : ids) {
             String parameterName = "$uId" + paramID;
             idPlaceholders.add(parameterName);
-            params.put(parameterName, PrimitiveValue.newUint64(uId));
 
-            query.append("DECLARE ").append(parameterName).append(" AS Uint64;\n");
+            //EXPERIMENTAL
+            buildIdParams(id, parameterName);
+
+            query.append("DECLARE ").append(parameterName).append(" AS Int64;\n");
         }
         query.append("DELETE FROM ").append(database).append(" WHERE uId IN (").append(idPlaceholders).append("); ");
 
@@ -216,18 +227,53 @@ public abstract class YdbRepository implements CrudRepository<UserEntity, Long> 
     }
 
     @Override
-    public void deleteAll(Iterable<? extends UserEntity> entities) {
-        List<Long> uIDs = new ArrayList<Long>();
-        for (UserEntity entity : entities) {
-            uIDs.add(entity.getUId());
+    public void deleteAll(Iterable<? extends T> entities) {
+        List<ID> IDs = new ArrayList<>();
+        for (T entity : entities) {
+            try {
+                IDs.add(getId(entity));
+            } catch (IllegalAccessException e) {
+                System.err.println("Cannot get ID of entity");
+                e.printStackTrace();
+            }
         }
-        deleteAllById(uIDs);
+        deleteAllById(IDs);
     }
 
     @Override
     public void deleteAll() {
         String query = "DELETE FROM " + database;
         TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
-        DataQueryResult result = sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl)).join().getValue();
+        sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl)).join().getValue();
+    }
+
+    private ID getId(T entity) throws IllegalAccessException {
+        Field field = ydbDatabaseInfo.getPrimaryKey();
+        field.setAccessible(true);
+        Object fieldValue = field.get(entity);
+        return (ID) fieldValue;
+    }
+
+    private Params buildClassParams(T entity) throws IllegalAccessException {
+        Map<String, Value<?>> params = new HashMap<>();
+        Field[] fields = ydbDatabaseInfo.getFields(entityType);
+
+        for (Field field : fields) {
+            field.setAccessible(true);
+            String fieldName = field.getName();
+            Object fieldValue = field.get(entity);
+            Type fieldType = field.getType();
+            params.put("$" + fieldName, PrimitiveTranslator.convertToPrimitiveValue(fieldValue, fieldType));
+        }
+
+        return Params.copyOf(params);
+    }
+
+    private Params buildIdParams(ID id, String paramName) {
+        Map<String, Value<?>> params = new HashMap<>();
+        Type idType = ydbDatabaseInfo.getPrimaryKey().getType();
+        params.put(paramName, PrimitiveTranslator.convertToPrimitiveValue(id, idType));
+
+        return Params.copyOf(params);
     }
 }

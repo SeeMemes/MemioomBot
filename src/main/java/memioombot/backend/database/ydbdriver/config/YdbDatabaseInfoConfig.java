@@ -13,6 +13,10 @@ public class YdbDatabaseInfoConfig {
 
     @Bean
     public YdbDatabaseInfo ydbDatabaseInfo () {
-        return new YdbDatabaseInfo(ydbAnnotationScanner.getDatabase());
+        return new YdbDatabaseInfo(
+                ydbAnnotationScanner.getDatabase(),
+                ydbAnnotationScanner.getFieldsMap(),
+                ydbAnnotationScanner.getPrimaryKey()
+                );
     }
 }

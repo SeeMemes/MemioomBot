@@ -1,16 +1,28 @@
 package memioombot.backend.database.ydbdriver.util;
 
+import java.lang.reflect.Field;
+import java.util.Map;
+
 public class YdbDatabaseInfo {
-    private String database;
-    public YdbDatabaseInfo (String database) {
+    private Map<String, String> database;
+    private Map<String, Field[]> fields;
+    private Field primaryKey;
+
+    public YdbDatabaseInfo(Map<String, String> database, Map<String, Field[]> fields, Field primaryKey) {
         this.database = database;
+        this.fields = fields;
+        this.primaryKey = primaryKey;
     }
 
-    public String getDatabase() {
-        return database;
+    public String getDatabase(String entityName) {
+        return database.get(entityName);
     }
 
-    public void setDatabase(String database) {
-        this.database = database;
+    public Field[] getFields(String database) {
+        return fields.get(database);
+    }
+
+    public Field getPrimaryKey() {
+        return primaryKey;
     }
 }
