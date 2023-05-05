@@ -27,6 +27,7 @@ import java.util.Map;
 public class PrimitiveTranslator {
 
     private static final Map<Class<?>, PrimitiveType> JAVA_TO_YQL_TYPES = new HashMap<>();
+    private static final Map<Class<?>, String> JAVA_TO_STRING_TYPES = new HashMap<>();
 
     static {
         JAVA_TO_YQL_TYPES.put(Boolean.class, PrimitiveType.Bool);
@@ -38,10 +39,24 @@ public class PrimitiveTranslator {
         JAVA_TO_YQL_TYPES.put(Double.class, PrimitiveType.Double);
         JAVA_TO_YQL_TYPES.put(byte[].class, PrimitiveType.Bytes);
         JAVA_TO_YQL_TYPES.put(String.class, PrimitiveType.Text);
+
+        JAVA_TO_STRING_TYPES.put(Boolean.class, "Bool");
+        JAVA_TO_STRING_TYPES.put(Byte.class, "Int8");
+        JAVA_TO_STRING_TYPES.put(Short.class, "Int16");
+        JAVA_TO_STRING_TYPES.put(Integer.class, "Int32");
+        JAVA_TO_STRING_TYPES.put(Long.class, "Int64");
+        JAVA_TO_STRING_TYPES.put(Float.class, "Float");
+        JAVA_TO_STRING_TYPES.put(Double.class, "Double");
+        JAVA_TO_STRING_TYPES.put(byte[].class, "Bytes");
+        JAVA_TO_STRING_TYPES.put(String.class, "Text");
     }
 
     public static PrimitiveType getPrimitiveType(Class<?> fieldType) {
         return JAVA_TO_YQL_TYPES.get(fieldType);
+    }
+
+    public static String getStringType(Class<?> fieldType) {
+        return JAVA_TO_STRING_TYPES.get(fieldType);
     }
 
     public static PrimitiveValue convertToPrimitiveValue(Object value, Type fieldType) {

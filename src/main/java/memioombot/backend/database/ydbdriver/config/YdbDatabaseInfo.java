@@ -1,4 +1,4 @@
-package memioombot.backend.database.ydbdriver.util;
+package memioombot.backend.database.ydbdriver.config;
 
 import java.lang.reflect.Field;
 import java.util.Map;

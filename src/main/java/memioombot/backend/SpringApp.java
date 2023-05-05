@@ -15,12 +15,12 @@ public class SpringApp {
     private static ApplicationContext applicationContext;
 
     public static void main(String[] args) {
-        //SpringApplication.run(SpringApp.class);
-        applicationContext =
+        SpringApplication.run(SpringApp.class);
+        /*applicationContext =
                 new AnnotationConfigApplicationContext(SpringApp.class);
 
         for (String beanName : applicationContext.getBeanDefinitionNames()) {
             System.out.println(beanName);
-        }
+        }*/
     }
 }

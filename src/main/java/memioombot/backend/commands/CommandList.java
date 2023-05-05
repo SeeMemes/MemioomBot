@@ -75,6 +75,10 @@ public class CommandList {
         }
     }
 
+    protected void areUsersInList(SlashCommandInteractionEvent event) {
+
+    }
+
     protected void ping(SlashCommandInteractionEvent event) {
         long time = System.currentTimeMillis();
         event.reply("Pong!").setEphemeral(false) // reply or acknowledge
