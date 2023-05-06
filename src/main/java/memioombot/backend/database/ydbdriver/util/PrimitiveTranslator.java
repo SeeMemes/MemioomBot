@@ -80,7 +80,7 @@ public class PrimitiveTranslator {
         } else if (value instanceof String && fieldType == String.class) {
             return PrimitiveValue.newText((String) value);
         } else {
-            throw new IllegalArgumentException("Unsupported field type: " + value.getClass());
+            throw new VariableTypeException("Unsupported field type: " + value.getClass());
         }
     }
 
@@ -104,7 +104,7 @@ public class PrimitiveTranslator {
         } else if (fieldType == String.class) {
             return value.getText();
         } else {
-            throw new IllegalArgumentException("Unsupported field type: " + value.getClass());
+            throw new VariableTypeException("Unsupported field type: " + value.getClass());
         }
     }
 }

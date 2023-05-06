@@ -6,12 +6,10 @@ import memioombot.backend.database.ydbdriver.util.exceptions.PrimaryKeyException
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
-import tech.ydb.core.Result;
 import tech.ydb.core.Status;
 import tech.ydb.core.grpc.GrpcTransport;
 import tech.ydb.table.SessionRetryContext;
 import tech.ydb.table.description.TableDescription;
-import tech.ydb.table.query.DataQueryResult;
 
 import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
