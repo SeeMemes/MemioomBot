@@ -20,7 +20,7 @@ public class UserEntity {
         uDiscriminator = Integer.parseInt(user.getDiscriminator());
     }
 
-    public UserEntity(Long uId, String uName, int uDiscriminator) {
+    public UserEntity(Long uId, String uName, Integer uDiscriminator) {
         this.uId = uId;
         this.uName = uName;
         this.uDiscriminator = uDiscriminator;

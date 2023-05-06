@@ -1,6 +1,7 @@
 package memioombot.backend.database.ydbdriver.util;
 
 import memioombot.backend.database.ydbdriver.util.exceptions.VariableTypeException;
+import tech.ydb.table.result.ValueReader;
 import tech.ydb.table.values.PrimitiveType;
 import tech.ydb.table.values.PrimitiveValue;
 
@@ -78,6 +79,30 @@ public class PrimitiveTranslator {
             return PrimitiveValue.newBytes((byte[]) value);
         } else if (value instanceof String && fieldType == String.class) {
             return PrimitiveValue.newText((String) value);
+        } else {
+            throw new IllegalArgumentException("Unsupported field type: " + value.getClass());
+        }
+    }
+
+    public static Object convertFromValueReader(ValueReader value, Type fieldType) {
+        if(fieldType == Boolean.class) {
+            return value.getBool();
+        } else if (fieldType == Byte.class) {
+            return value.getInt8();
+        } else if (fieldType == Short.class) {
+            return value.getInt16();
+        } else if (fieldType == Integer.class) {
+            return value.getInt32();
+        } else if (fieldType == Long.class) {
+            return value.getInt64();
+        } else if (fieldType == Float.class) {
+            return value.getFloat();
+        } else if (fieldType == Double.class) {
+            return value.getDouble();
+        } else if (fieldType == byte[].class) {
+            return value.getBytes();
+        } else if (fieldType == String.class) {
+            return value.getText();
         } else {
             throw new IllegalArgumentException("Unsupported field type: " + value.getClass());
         }

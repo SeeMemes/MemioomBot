@@ -29,7 +29,7 @@ public class YdbAnnotationScanner {
     private GrpcTransport grpcTransport;
     private Map<String, String> database = new HashMap<>();
     private Map<String, Field[]> fieldsMap = new HashMap<>();
-    private Field primaryKey;
+    private Map<String, Field> primaryKeys = new HashMap<>();
 
     @PostConstruct
     public void scanAndCreateDatabase() {
@@ -38,20 +38,22 @@ public class YdbAnnotationScanner {
         for (Object ydbEntityBean : ydbEntityBeans.values()) {
             Class<?> entityClass = ydbEntityBean.getClass();
             Field[] fields = entityClass.getDeclaredFields();
+            String entityClassName = entityClass.getName();
             String primaryKeyName = "";
-
+            Field primaryKey = null;
             for (Field field : fields) {
                 if (field.isAnnotationPresent(YdbPrimaryKey.class)) {
                     primaryKeyName = field.getName();
-                    this.primaryKey = field;
+                    primaryKey = field;
                     break;
                 }
             }
             if (!primaryKeyName.isEmpty()) {
                 YdbEntity annotation = entityClass.getAnnotation(YdbEntity.class);
                 String tableName = annotation.dbName().isEmpty() ? entityClass.getSimpleName() : annotation.dbName();
-                this.database.put(entityClass.getName(), tableName);
-                this.fieldsMap.put(entityClass.getName(), fields);
+                this.database.put(entityClassName, tableName);
+                this.fieldsMap.put(tableName, fields);
+                this.primaryKeys.put(tableName, primaryKey);
                 createTableInDatabase(tableName, primaryKeyName, fields);
             } else throw new PrimaryKeyException("Primary key is not set");
         }
@@ -78,7 +80,7 @@ public class YdbAnnotationScanner {
         return fieldsMap;
     }
 
-    public Field getPrimaryKey() {
-        return primaryKey;
+    public Map<String, Field> getPrimaryKey() {
+        return primaryKeys;
     }
 }

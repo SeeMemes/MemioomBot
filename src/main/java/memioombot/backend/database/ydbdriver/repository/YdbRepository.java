@@ -1,18 +1,15 @@
 package memioombot.backend.database.ydbdriver.repository;
 
-import memioombot.backend.database.entities.UserEntity;
-import memioombot.backend.database.ydbdriver.util.PrimitiveTranslator;
 import memioombot.backend.database.ydbdriver.config.YdbDatabaseInfo;
+import memioombot.backend.database.ydbdriver.util.PrimitiveTranslator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.NoRepositoryBean;
 import tech.ydb.core.Result;
 import tech.ydb.table.SessionRetryContext;
 import tech.ydb.table.query.DataQueryResult;
-import tech.ydb.table.query.Params;
 import tech.ydb.table.result.ResultSetReader;
 import tech.ydb.table.transaction.TxControl;
-import tech.ydb.table.values.Value;
 
 import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
@@ -27,17 +24,25 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
     private YdbDatabaseInfo ydbDatabaseInfo;
     @Autowired
     private SessionRetryContext sessionRetryContext;
-    String entityType;
-    private final TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
+    private String entityTypeName;
+    private Class<?> entityClass;
+    private Field primaryKey;
+    private Field[] fields;
     private String database;
+    private final TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
+
 
     @PostConstruct
     private void completeDatabaseInfo() {
         Type type = getClass().getGenericSuperclass();
         ParameterizedType paramType = (ParameterizedType) type;
         Type[] typeArguments = paramType.getActualTypeArguments();
-        this.entityType = typeArguments[0].getTypeName();
-        this.database = ydbDatabaseInfo.getDatabase(entityType);
+        this.entityClass = (Class<?>) typeArguments[0];
+        this.entityTypeName = typeArguments[0].getTypeName();
+        this.database = ydbDatabaseInfo.getDatabase(entityTypeName);
+        this.fields = ydbDatabaseInfo.getFields(database);
+        this.primaryKey = ydbDatabaseInfo.getPrimaryKey(database);
+        this.primaryKey.setAccessible(true);
     }
 
     @Override
@@ -94,13 +99,7 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
             ResultSetReader rs = result.getValue().getResultSet(0);
             if (result.isSuccess()) {
-                //TO BE DONE
-                UserEntity userEntity = new UserEntity(
-                        rs.getColumn("uId").getInt64(),
-                        rs.getColumn("uName").getText(),
-                        rs.getColumn("uDiscriminator").getInt32()
-                );
-                return Optional.of((T) userEntity);
+                return Optional.of(createEntity(rs));
             } else {
                 return Optional.empty();
             }
@@ -134,18 +133,12 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
         DataQueryResult result = sessionRetryContext.supplyResult(session ->
                 session.executeDataQuery(query, txControl)).join().getValue();
         ResultSetReader rs = result.getResultSet(0);
-        List<T> userEntities = new ArrayList<>();
+        List<T> Entities = new ArrayList<>();
         while (rs.next()) {
-            //TO BE DONE
-            UserEntity userEntity = new UserEntity(
-                    rs.getColumn("uId").getInt64(),
-                    rs.getColumn("uName").getText(),
-                    rs.getColumn("uDiscriminator").getInt32()
-            );
-            userEntities.add((T) userEntity);
+            Entities.add(createEntity(rs));
         }
 
-        return userEntities;
+        return Entities;
     }
 
     @Override
@@ -164,18 +157,11 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             DataQueryResult result = sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join().getValue();
             ResultSetReader rs = result.getResultSet(0);
-            List<T> userEntities = new ArrayList<>();
-
+            List<T> Entities = new ArrayList<>();
             while (rs.next()) {
-                //TO BE DONE
-                UserEntity userEntity = new UserEntity(
-                        rs.getColumn("uId").getInt64(),
-                        rs.getColumn("uName").getText(),
-                        rs.getColumn("uDiscriminator").getInt32()
-                );
-                userEntities.add((T) userEntity);
+                Entities.add(createEntity(rs));
             }
-            return userEntities;
+            return Entities;
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -259,9 +245,21 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
     }
 
     private ID getId(T entity) throws IllegalAccessException {
-        Field field = ydbDatabaseInfo.getPrimaryKey();
-        field.setAccessible(true);
-        Object fieldValue = field.get(entity);
+        Object fieldValue = this.primaryKey.get(entity);
         return (ID) fieldValue;
+    }
+
+    public T createEntity(ResultSetReader rs) {
+        try {
+            T entity = (T) entityClass.newInstance();
+            for (Field field : fields) {
+                Object fieldValue = PrimitiveTranslator.convertFromValueReader(rs.getColumn(field.getName()), field.getType());
+                field.setAccessible(true);
+                field.set(entity, fieldValue);
+            }
+            return entity;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create entity", e);
+        }
     }
 }

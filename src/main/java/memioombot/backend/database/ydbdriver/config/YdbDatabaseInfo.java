@@ -6,12 +6,12 @@ import java.util.Map;
 public class YdbDatabaseInfo {
     private Map<String, String> database;
     private Map<String, Field[]> fields;
-    private Field primaryKey;
+    private Map<String, Field> primaryKeys;
 
-    public YdbDatabaseInfo(Map<String, String> database, Map<String, Field[]> fields, Field primaryKey) {
+    public YdbDatabaseInfo(Map<String, String> database, Map<String, Field[]> fields, Map<String, Field> primaryKeys) {
         this.database = database;
         this.fields = fields;
-        this.primaryKey = primaryKey;
+        this.primaryKeys = primaryKeys;
     }
 
     public String getDatabase(String entityName) {
@@ -22,7 +22,7 @@ public class YdbDatabaseInfo {
         return fields.get(database);
     }
 
-    public Field getPrimaryKey() {
-        return primaryKey;
+    public Field getPrimaryKey(String database) {
+        return primaryKeys.get(database);
     }
 }
