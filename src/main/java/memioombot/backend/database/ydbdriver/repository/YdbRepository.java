@@ -19,7 +19,6 @@ import java.util.*;
 
 @NoRepositoryBean
 public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
-
     @Autowired
     private YdbDatabaseInfo ydbDatabaseInfo;
     @Autowired
@@ -48,8 +47,8 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
     @Override
     public <S extends T> S save(S entity) {
         try {
-            QueryBuilder queryBuilder = QueryBuilder.newBuilder(database, entity)
-                    .declareVariables()
+            QueryBuilder queryBuilder = QueryBuilder.newClassBuilder(database)
+                    .declareVariables(entity)
                     .addCommand("UPSERT INTO")
                     .addTableConstruct()
                     .build();
@@ -59,38 +58,35 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             if (result.isSuccess()) return entity;
             else return null;
         } catch (IllegalAccessException e) {
-            System.err.println("Cannot get field in entity");
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException("Failed to save entity", e);
         }
     }
 
     @Override
     public <S extends T> Iterable<S> saveAll(Iterable<S> entities) {
-        List<S> savedEntities = new ArrayList<>();
-        for (S entity : entities) {
-            try {
-                QueryBuilder queryBuilder = QueryBuilder.newBuilder(database, entity)
-                        .declareVariables()
-                        .addCommand("UPSERT INTO")
-                        .addTableConstruct()
-                        .build();
-
-                Result<DataQueryResult> result = sessionRetryContext.supplyResult(session ->
-                        session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
-                if (result.isSuccess()) savedEntities.add(entity);
-            } catch (IllegalAccessException e) {
-                System.err.println("Cannot get field in entity");
-                e.printStackTrace();
+        try {
+            List<S> savedEntities = new ArrayList<>();
+            QueryBuilder.ClassBuilder classBuilder = QueryBuilder.newClassBuilder(database);
+            for (S entity : entities) {
+                classBuilder.declareVariables(entity);
+                savedEntities.add(entity);
             }
+            QueryBuilder queryBuilder = classBuilder
+                    .addCommand("UPSERT INTO")
+                    .addTableConstruct()
+                    .build();
+            sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
+            return savedEntities;
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Failed to save all entities by id", e);
         }
-        return savedEntities;
     }
 
     @Override
     public Optional<T> findById(ID id) {
         try {
-            QueryBuilder queryBuilder = QueryBuilder.newBuilder(database)
+            QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
                     .declareVariables(id, "uId")
                     .addCommand("SELECT * FROM")
                     .variablesIn()
@@ -104,16 +100,14 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                 return Optional.empty();
             }
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to find entity by id", e);
         }
-
-
     }
 
     @Override
     public boolean existsById(ID id) {
         try {
-            QueryBuilder queryBuilder = QueryBuilder.newBuilder(database)
+            QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
                     .declareVariables(id, "uId")
                     .addCommand("SELECT COUNT(*) FROM")
                     .variablesIn()
@@ -122,29 +116,33 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join().getValue();
             return result.getResultSet(0).getRowCount() > 0;
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to determine entity by id", e);
         }
     }
 
     @Override
     public Iterable<T> findAll() {
-        String query
-                = "SELECT * from " + database + "; ";
-        DataQueryResult result = sessionRetryContext.supplyResult(session ->
-                session.executeDataQuery(query, txControl)).join().getValue();
-        ResultSetReader rs = result.getResultSet(0);
-        List<T> Entities = new ArrayList<>();
-        while (rs.next()) {
-            Entities.add(createEntity(rs));
+        try {
+            QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
+                    .addCommand("SELECT * FROM")
+                    .build();
+            DataQueryResult result = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl)).join().getValue();
+            ResultSetReader rs = result.getResultSet(0);
+            List<T> Entities = new ArrayList<>();
+            while (rs.next()) {
+                Entities.add(createEntity(rs));
+            }
+            return Entities;
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Failed to find all entities", e);
         }
-
-        return Entities;
     }
 
     @Override
     public Iterable<T> findAllById(Iterable<ID> ids) {
         try {
-            QueryBuilder.SingleParamBuilder singleParamBuilder = QueryBuilder.newBuilder(database);
+            QueryBuilder.SingleParamBuilder singleParamBuilder = QueryBuilder.newSingleParamBuilder(database);
             for (ID id : ids) {
                 singleParamBuilder
                         .declareVariables(id, "uId");
@@ -163,23 +161,29 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             }
             return Entities;
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to find all entities by id", e);
         }
     }
 
     @Override
     public long count() {
-        String query = "SELECT COUNT(*) FROM " + database + "; ";
-        DataQueryResult result = sessionRetryContext.supplyResult(session ->
-                session.executeDataQuery(query.toString(), txControl)).join().getValue();
-        ResultSetReader rs = result.getResultSet(0);
-        return rs.getColumn("column0").getUint64();
+        try {
+            QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
+                    .addCommand("SELECT COUNT(*) FROM")
+                    .build();
+            DataQueryResult result = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl)).join().getValue();
+            ResultSetReader rs = result.getResultSet(0);
+            return rs.getColumn("column0").getUint64();
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Failed to count entities", e);
+        }
     }
 
     @Override
     public void deleteById(ID id) {
         try {
-            QueryBuilder queryBuilder = QueryBuilder.newBuilder(database)
+            QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
                     .declareVariables(id, "uId")
                     .addCommand("DELETE FROM")
                     .variablesIn()
@@ -189,7 +193,7 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to delete entity by id", e);
         }
     }
 
@@ -206,7 +210,7 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
     @Override
     public void deleteAllById(Iterable<? extends ID> ids) {
         try {
-            QueryBuilder.SingleParamBuilder singleParamBuilder = QueryBuilder.newBuilder(database);
+            QueryBuilder.SingleParamBuilder singleParamBuilder = QueryBuilder.newSingleParamBuilder(database);
             for (ID id : ids) {
                 singleParamBuilder
                         .declareVariables(id, "uId");
@@ -218,7 +222,7 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to delete all entities by id", e);
         }
 
     }
@@ -239,9 +243,16 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
 
     @Override
     public void deleteAll() {
-        String query = "DELETE FROM " + database;
-        TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
-        sessionRetryContext.supplyResult(session -> session.executeDataQuery(query, txControl)).join().getValue();
+        try {
+            QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
+                    .addCommand("DELETE FROM")
+                    .build();
+            sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl)).join().getValue();
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Failed to delete all entities", e);
+        }
+
     }
 
     private ID getId(T entity) throws IllegalAccessException {

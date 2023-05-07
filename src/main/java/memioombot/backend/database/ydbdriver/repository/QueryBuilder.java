@@ -1,6 +1,7 @@
 package memioombot.backend.database.ydbdriver.repository;
 
 import memioombot.backend.database.ydbdriver.util.PrimitiveTranslator;
+import memioombot.backend.database.ydbdriver.util.exceptions.VariableTypeException;
 import tech.ydb.table.query.Params;
 import tech.ydb.table.values.Value;
 
@@ -22,11 +23,11 @@ public class QueryBuilder {
         this.params = builder.params;
     }
 
-    public static ClassBuilder newBuilder(String database, Object object) {
-        return new ClassBuilder(database, object);
+    public static ClassBuilder newClassBuilder(String database) {
+        return new ClassBuilder(database);
     }
 
-    public static SingleParamBuilder newBuilder (String database) {
+    public static SingleParamBuilder newSingleParamBuilder(String database) {
         return new SingleParamBuilder(database);
     }
 
@@ -40,23 +41,35 @@ public class QueryBuilder {
 
     public static class ClassBuilder {
         private String database;
-        private Field[] fields;
-        private Object object;
+        private List<Field[]> fieldsArray = new ArrayList<>();
+        private List<Object> objects = new ArrayList<>();
         private StringBuilder stringBuilder = new StringBuilder();
         private String query = "";
         private Params params;
 
-        public ClassBuilder(String database, Object object) {
+        public ClassBuilder(String database) {
             this.database = database;
-            this.fields = object.getClass().getDeclaredFields();
-            this.object = object;
         }
 
-        public ClassBuilder declareVariables() {
+        public ClassBuilder declareVariables(Object object) {
+            int listOrd;
+            if (objects.size() > 0) {
+                Object prevObj = this.objects.get(objects.size() - 1);
+                if (!object.getClass().equals(prevObj.getClass())) {
+                    throw new VariableTypeException("The type of object differs from previous");
+                }
+            }
+
+            Field[] fields = object.getClass().getDeclaredFields();
+            this.fieldsArray.add(fields);
+            objects.add(object);
+
+            listOrd = objects.size() - 1;
             for (Field field : fields) {
+                String parameterName = "$" + field.getName() + listOrd;
                 stringBuilder
-                        .append(" DEClARE $")
-                        .append(field.getName())
+                        .append(" DECLARE ")
+                        .append(parameterName)
                         .append(" AS ")
                         .append(PrimitiveTranslator.getStringType(field.getType()))
                         .append(" ;\n");
@@ -74,57 +87,73 @@ public class QueryBuilder {
         }
 
         public ClassBuilder addWhereCondition() {
+            int listOrd = 0;
+
             stringBuilder
                     .append(" WHERE ");
-            for (Field field : fields) {
-                stringBuilder
-                        .append(field.getName())
-                        .append(" = ")
-                        .append(" $")
-                        .append(field.getName())
-                        .append(" ;\n");
+            for (Field[] fields : this.fieldsArray) {
+                for (Field field : fields) {
+                    String fieldName = field.getName();
+                    String parameterName = "$" + field.getName() + listOrd;
+                    stringBuilder
+                            .append(fieldName)
+                            .append(" = ")
+                            .append(parameterName)
+                            .append(" ;\n");
+                }
+                listOrd++;
             }
             return this;
         }
 
         public ClassBuilder addTableConstruct() {
-            int i = 0;
+            int listOrd = 0;
+
             stringBuilder
                     .append(" (");
-            for (Field field : fields) {
-                stringBuilder
-                        .append(field.getName());
-                if (++i < fields.length)
-                    stringBuilder
-                            .append(", ");
+            StringJoiner differentVariables = new StringJoiner(",");
+            for (Field field : objects.get(0).getClass().getDeclaredFields()) {
+                String parameterName = field.getName();
+                differentVariables.add(parameterName);
+            }
+            stringBuilder
+                    .append(differentVariables)
+                    .append(")\n")
+                    .append("VALUES ");
+
+            StringJoiner differentConstructs = new StringJoiner(",\n");
+            for (Field[] fields : fieldsArray) {
+                String tableConstruct = "(";
+                differentVariables = new StringJoiner(",");
+                for (Field field : fields) {
+                    String parameterName = "$" + field.getName() + listOrd;
+                    differentVariables.add(parameterName);
+                }
+                tableConstruct += differentVariables + ")";
+                differentConstructs.add(tableConstruct);
+                listOrd++;
             }
 
-            i = 0;
             stringBuilder
-                    .append(")\n")
-                    .append("VALUES (");
-            for (Field field : fields) {
-                stringBuilder
-                        .append("$")
-                        .append(field.getName());
-                if (++i < fields.length)
-                    stringBuilder
-                            .append(", ");
-            }
-            stringBuilder
-                    .append(");\n");
+                    .append(differentConstructs)
+                    .append(";\n");
             return this;
         }
 
         public QueryBuilder build() throws IllegalAccessException {
+            int listOrd = 0;
+
             Map<String, Value<?>> paramMap = new HashMap<>();
 
-            for (Field field : fields) {
-                field.setAccessible(true);
-                String fieldName = field.getName();
-                Object fieldValue = field.get(object);
-                Type fieldType = field.getType();
-                paramMap.put("$" + fieldName, PrimitiveTranslator.convertToPrimitiveValue(fieldValue, fieldType));
+            for (Field[] fields : fieldsArray) {
+                for (Field field : fields) {
+                    field.setAccessible(true);
+                    String parameterName = "$" + field.getName() + listOrd;
+                    Object fieldValue = field.get(objects.get(listOrd));
+                    Type fieldType = field.getType();
+                    paramMap.put(parameterName, PrimitiveTranslator.convertToPrimitiveValue(fieldValue, fieldType));
+                }
+                listOrd++;
             }
 
             this.query = stringBuilder.toString();
@@ -179,7 +208,7 @@ public class QueryBuilder {
             int paramID = 0;
             int listOrd = 0;
             stringBuilder
-                    .append("WHERE ");
+                    .append(" WHERE ");
             StringJoiner differentObjectsJoiner = new StringJoiner(" or ");
             for (List<Object> list : objects) {
                 String lastName = objectNames.get(listOrd);

@@ -1,7 +1,6 @@
+memioombot\backend\boot\MemioomBot.class
 memioombot\backend\SpringApp.class
-memioombot\backend\database\ydbdriver\YdbConfig.class
 memioombot\backend\database\repositories\UserRepository.class
 memioombot\backend\commands\CommandListener.class
-memioombot\backend\boot\MemioomBot.class
 memioombot\backend\database\entities\UserEntity.class
 memioombot\backend\commands\CommandList.class
