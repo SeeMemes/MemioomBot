@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @NoRepositoryBean
 public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
@@ -53,10 +54,12 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                     .addTableConstruct()
                     .build();
 
-            Result<DataQueryResult> result = sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
-            if (result.isSuccess()) return entity;
-            else return null;
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
+            return futureResult.thenApply(result -> {
+                if (result.isSuccess()) return entity;
+                else return null;
+            }).join();
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to save entity", e);
         }
@@ -75,9 +78,13 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                     .addCommand("UPSERT INTO")
                     .addTableConstruct()
                     .build();
-            sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
-            return savedEntities;
+
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
+            return futureResult.thenApply(result -> {
+                if (result.isSuccess()) return savedEntities;
+                else return null;
+            }).join();
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to save all entities by id", e);
         }
@@ -91,14 +98,17 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                     .addCommand("SELECT * FROM")
                     .variablesIn()
                     .build();
-            Result<DataQueryResult> result = sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
-            ResultSetReader rs = result.getValue().getResultSet(0);
-            if (result.isSuccess()) {
-                return Optional.of(createEntity(rs));
-            } else {
-                return Optional.empty();
-            }
+
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
+            return (Optional<T>) futureResult.thenApply(result -> {
+                ResultSetReader rs = result.getValue().getResultSet(0);
+                if (result.isSuccess()) {
+                    return Optional.of(createEntity(rs));
+                } else {
+                    return Optional.empty();
+                }
+            }).join();
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to find entity by id", e);
         }
@@ -112,9 +122,11 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                     .addCommand("SELECT COUNT(*) FROM")
                     .variablesIn()
                     .build();
-            DataQueryResult result = sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join().getValue();
-            return result.getResultSet(0).getRowCount() > 0;
+
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
+            return futureResult.thenApply(result ->
+                    result.getValue().getResultSet(0).getRowCount() > 0).join();
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to determine entity by id", e);
         }
@@ -126,14 +138,17 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
                     .addCommand("SELECT * FROM")
                     .build();
-            DataQueryResult result = sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl)).join().getValue();
-            ResultSetReader rs = result.getResultSet(0);
-            List<T> Entities = new ArrayList<>();
-            while (rs.next()) {
-                Entities.add(createEntity(rs));
-            }
-            return Entities;
+
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl));
+            return futureResult.thenApply(result -> {
+                ResultSetReader rs = result.getValue().getResultSet(0);
+                List<T> Entities = new ArrayList<>();
+                while (rs.next()) {
+                    Entities.add(createEntity(rs));
+                }
+                return Entities;
+            }).join();
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to find all entities", e);
         }
@@ -150,16 +165,18 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             singleParamBuilder
                     .addCommand("SELECT * FROM")
                     .variablesIn();
-
             QueryBuilder queryBuilder = singleParamBuilder.build();
-            DataQueryResult result = sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join().getValue();
-            ResultSetReader rs = result.getResultSet(0);
-            List<T> Entities = new ArrayList<>();
-            while (rs.next()) {
-                Entities.add(createEntity(rs));
-            }
-            return Entities;
+
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
+            return futureResult.thenApply(result -> {
+                ResultSetReader rs = result.getValue().getResultSet(0);
+                List<T> Entities = new ArrayList<>();
+                while (rs.next()) {
+                    Entities.add(createEntity(rs));
+                }
+                return Entities;
+            }).join();
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to find all entities by id", e);
         }
@@ -171,10 +188,13 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
                     .addCommand("SELECT COUNT(*) FROM")
                     .build();
-            DataQueryResult result = sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl)).join().getValue();
-            ResultSetReader rs = result.getResultSet(0);
-            return rs.getColumn("column0").getUint64();
+
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl));
+            return futureResult.thenApply(result -> {
+                ResultSetReader rs = result.getValue().getResultSet(0);
+                return rs.getColumn("column0").getUint64();
+            }).join();
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to count entities", e);
         }
@@ -189,9 +209,8 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                     .variablesIn()
                     .build();
 
-            TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
-            sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to delete entity by id", e);
         }
@@ -219,8 +238,9 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
                     .addCommand("DELETE FROM")
                     .variablesIn();
             QueryBuilder queryBuilder = singleParamBuilder.build();
-            sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams())).join();
+
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to delete all entities by id", e);
         }
@@ -247,8 +267,9 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
                     .addCommand("DELETE FROM")
                     .build();
-            sessionRetryContext.supplyResult(session ->
-                    session.executeDataQuery(queryBuilder.getQuery(), txControl)).join().getValue();
+
+            CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
+                    session.executeDataQuery(queryBuilder.getQuery(), txControl));
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to delete all entities", e);
         }

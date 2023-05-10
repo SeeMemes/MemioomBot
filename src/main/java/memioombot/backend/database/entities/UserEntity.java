@@ -8,8 +8,8 @@ import net.dv8tion.jda.api.entities.User;
 public class UserEntity {
     @YdbPrimaryKey
     private Long uId;
-    Integer uDiscriminator;
-    String uName;
+    private Integer uDiscriminator;
+    private String uName;
 
     public UserEntity() {
     }
