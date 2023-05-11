@@ -41,18 +41,25 @@ public class QueryBuilder {
 
     public static class ClassBuilder {
         private String database;
+        private String declarations;
+        private String command;
+        private String variablesDescription;
         private List<Field[]> fieldsArray = new ArrayList<>();
         private List<Object> objects = new ArrayList<>();
-        private StringBuilder stringBuilder = new StringBuilder();
         private String query = "";
         private Params params;
 
         public ClassBuilder(String database) {
             this.database = database;
+            this.declarations = "";
+            this.command = "";
+            this.variablesDescription = "";
         }
 
         public ClassBuilder declareVariables(Object object) {
+            StringBuilder stringBuilder = new StringBuilder();
             int listOrd;
+
             if (objects.size() > 0) {
                 Object prevObj = this.objects.get(objects.size() - 1);
                 if (!object.getClass().equals(prevObj.getClass())) {
@@ -74,19 +81,26 @@ public class QueryBuilder {
                         .append(PrimitiveTranslator.getStringType(field.getType()))
                         .append(" ;\n");
             }
+
+            this.declarations += stringBuilder;
             return this;
         }
 
         public ClassBuilder addCommand(String commandType) {
+            StringBuilder stringBuilder = new StringBuilder();
+
             stringBuilder
                     .append(commandType)
                     .append(" ")
                     .append(database)
                     .append(" ");
+
+            this.command += stringBuilder;
             return this;
         }
 
         public ClassBuilder addWhereCondition() {
+            StringBuilder stringBuilder = new StringBuilder();
             int listOrd = 0;
 
             stringBuilder
@@ -103,10 +117,13 @@ public class QueryBuilder {
                 }
                 listOrd++;
             }
+
+            this.variablesDescription += stringBuilder;
             return this;
         }
 
         public ClassBuilder addTableConstruct() {
+            StringBuilder stringBuilder = new StringBuilder();
             int listOrd = 0;
 
             stringBuilder
@@ -137,6 +154,8 @@ public class QueryBuilder {
             stringBuilder
                     .append(differentConstructs)
                     .append(";\n");
+
+            this.variablesDescription += stringBuilder;
             return this;
         }
 
@@ -156,7 +175,7 @@ public class QueryBuilder {
                 listOrd++;
             }
 
-            this.query = stringBuilder.toString();
+            this.query = this.declarations + this.command + this.variablesDescription;
             this.params = Params.copyOf(paramMap);
             return new QueryBuilder(this);
         }
@@ -165,18 +184,29 @@ public class QueryBuilder {
     public static class SingleParamBuilder {
         private String database;
         private String objectLastName;
+        private String declarations;
+        private String command;
+        private String variablesDescription;
         private List<List<Object>> objects = new ArrayList<>();
         private List<String> objectNames = new ArrayList<>();
-        private StringBuilder stringBuilder = new StringBuilder();
         private String query = "";
         private Params params;
 
         public SingleParamBuilder(String database) {
             this.database = database;
+            this.declarations = "";
+            this.command = "";
+            this.variablesDescription = "";
+            this.objectLastName = "";
         }
 
         public SingleParamBuilder declareVariables(Object object, String objectName) {
+            StringBuilder stringBuilder = new StringBuilder();
+
             if (!objectName.equals(objectLastName)) {
+                if (objectLastName.equals("")) {
+                    objectLastName = objectName;
+                }
                 List<Object> newObjList = new ArrayList<>();
                 newObjList.add(object);
                 objects.add(newObjList);
@@ -192,21 +222,28 @@ public class QueryBuilder {
                     .append(" AS ")
                     .append(PrimitiveTranslator.getStringType(object.getClass()))
                     .append(" ;\n");
+
+            this.declarations += stringBuilder;
             return this;
         }
 
         public SingleParamBuilder addCommand(String commandType) {
+            StringBuilder stringBuilder = new StringBuilder();
+
             stringBuilder
                     .append(commandType)
                     .append(" ")
                     .append(database)
                     .append(" ");
+            this.command += stringBuilder;
             return this;
         }
 
         public SingleParamBuilder variablesIn() {
+            StringBuilder stringBuilder = new StringBuilder();
             int paramID = 0;
             int listOrd = 0;
+
             stringBuilder
                     .append(" WHERE ");
             StringJoiner differentObjectsJoiner = new StringJoiner(" or ");
@@ -229,6 +266,8 @@ public class QueryBuilder {
             }
             stringBuilder
                     .append(differentObjectsJoiner);
+
+            this.variablesDescription += stringBuilder;
             return this;
         }
 
@@ -248,7 +287,7 @@ public class QueryBuilder {
                 listOrd++;
             }
 
-            this.query = stringBuilder.toString();
+            this.query = this.declarations + this.command + this.variablesDescription;
             this.params = Params.copyOf(paramMap);
             return new QueryBuilder(this);
         }
