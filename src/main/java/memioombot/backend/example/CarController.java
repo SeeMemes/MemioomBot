@@ -2,6 +2,7 @@ package memioombot.backend.example;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.CompletableFuture;
@@ -18,24 +19,39 @@ public class CarController {
     }
 
     @GetMapping("/getCar/{id}")
+    @Async
     public ResponseEntity<CarEntity> getCarEntity (@PathVariable Long id) {
-        CarEntity resultCar = carRepository.findById(id).join().get();
-        return ResponseEntity.ok(resultCar);
+        return CompletableFuture.supplyAsync(() -> {
+            CarEntity resultCar = carRepository.findById(id).join().get();
+            return ResponseEntity.ok(resultCar);
+        }).join();
+
+    }
+
+    @GetMapping("/getCars")
+    @Async
+    public ResponseEntity<Iterable<CarEntity>> getCarsEntity () {
+        return CompletableFuture.supplyAsync(() -> {
+            Iterable<CarEntity> resultCars = carRepository.findAll().join();
+            return ResponseEntity.ok(resultCars);
+        }).join();
     }
 
     @PostMapping("/addCar")
+    @Async
     public ResponseEntity<String> createCar (@RequestBody CarEntity carEntity) {
-        Long carId = carEntity.getCar_id();
-        if (!carRepository.findById(carId).join().isPresent()) {
+        return CompletableFuture.supplyAsync(() -> {
             carRepository.save(carEntity);
             return ResponseEntity.ok("Car has been added successfully");
-        }
-        else return ResponseEntity.badRequest().body("Car exists");
+        }).join();
     }
 
-    @DeleteMapping("/deleteCar/{id}")
+    @GetMapping("/deleteCar/{id}")
+    @Async
     public ResponseEntity<String> deleteCar (@PathVariable Long id) {
-        carRepository.deleteById(id);
-        return ResponseEntity.ok("Car deleted successfully");
+        return CompletableFuture.supplyAsync(() -> {
+            carRepository.deleteById(id);
+            return (ResponseEntity.ok("Car deleted successfully"));
+        }).join();
     }
 }

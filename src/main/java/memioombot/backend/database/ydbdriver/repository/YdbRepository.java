@@ -2,6 +2,8 @@ package memioombot.backend.database.ydbdriver.repository;
 
 import memioombot.backend.database.ydbdriver.config.YdbDatabaseInfo;
 import memioombot.backend.database.ydbdriver.util.PrimitiveTranslator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.NoRepositoryBean;
 import org.springframework.scheduling.annotation.Async;
@@ -27,9 +29,11 @@ public abstract class YdbRepository<T, ID> {
     private String entityTypeName;
     private Class<?> entityClass;
     private Field primaryKey;
+    private String primaryKeyName;
     private Field[] fields;
     private String database;
     private final TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
+    private static Logger log = LoggerFactory.getLogger(YdbRepository.class);
 
 
     @PostConstruct
@@ -42,6 +46,7 @@ public abstract class YdbRepository<T, ID> {
         this.database = ydbDatabaseInfo.getDatabase(entityTypeName);
         this.fields = ydbDatabaseInfo.getFields(database);
         this.primaryKey = ydbDatabaseInfo.getPrimaryKey(database);
+        this.primaryKeyName = this.primaryKey.getName();
         this.primaryKey.setAccessible(true);
     }
 
@@ -94,7 +99,7 @@ public abstract class YdbRepository<T, ID> {
     public CompletableFuture<Optional<T>> findById(ID id) {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
-                    .declareVariables(id, primaryKey.getName())
+                    .declareVariables(id, this.primaryKeyName)
                     .addCommand("SELECT * FROM")
                     .variablesIn()
                     .build();
@@ -118,7 +123,7 @@ public abstract class YdbRepository<T, ID> {
     public CompletableFuture<Boolean> existsById(ID id) {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
-                    .declareVariables(id, primaryKey.getName())
+                    .declareVariables(id, this.primaryKeyName)
                     .addCommand("SELECT COUNT(*) FROM")
                     .variablesIn()
                     .build();
@@ -149,7 +154,7 @@ public abstract class YdbRepository<T, ID> {
                 }
                 return Entities;
             });
-        } catch (IllegalAccessException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to find all entities", e);
         }
     }
@@ -160,7 +165,7 @@ public abstract class YdbRepository<T, ID> {
             QueryBuilder.SingleParamBuilder singleParamBuilder = QueryBuilder.newSingleParamBuilder(database);
             for (ID id : ids) {
                 singleParamBuilder
-                        .declareVariables(id, primaryKey.getName());
+                        .declareVariables(id, this.primaryKeyName);
             }
             singleParamBuilder
                     .addCommand("SELECT * FROM")
@@ -205,7 +210,7 @@ public abstract class YdbRepository<T, ID> {
     public void deleteById(ID id) {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
-                    .declareVariables(id, primaryKey.getName())
+                    .declareVariables(id, this.primaryKeyName)
                     .addCommand("DELETE FROM")
                     .variablesIn()
                     .build();
@@ -233,7 +238,7 @@ public abstract class YdbRepository<T, ID> {
             QueryBuilder.SingleParamBuilder singleParamBuilder = QueryBuilder.newSingleParamBuilder(database);
             for (ID id : ids) {
                 singleParamBuilder
-                        .declareVariables(id, primaryKey.getName());
+                        .declareVariables(id, this.primaryKeyName);
             }
             singleParamBuilder
                     .addCommand("DELETE FROM")

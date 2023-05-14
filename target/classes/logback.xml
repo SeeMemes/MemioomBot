@@ -18,7 +18,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.example" level="debug"/>
+    <logger name="memioombot.backend" level="info"/>
 
     <root level="info">
         <appender-ref ref="console"/>
