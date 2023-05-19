@@ -287,7 +287,7 @@ public abstract class YdbRepository<T, ID> {
         return (ID) fieldValue;
     }
 
-    public T createEntity(ResultSetReader rs) {
+    private T createEntity(ResultSetReader rs) {
         try {
             T entity = (T) entityClass.newInstance();
             for (Field field : fields) {

@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -19,39 +21,46 @@ public class CarController {
     }
 
     @GetMapping("/getCar/{id}")
-    @Async
     public ResponseEntity<CarEntity> getCarEntity (@PathVariable Long id) {
-        return CompletableFuture.supplyAsync(() -> {
-            CarEntity resultCar = carRepository.findById(id).join().get();
-            return ResponseEntity.ok(resultCar);
+        return carRepository.findById(id).thenApplyAsync((carEntity) -> {
+            if (carEntity.isPresent()) return ResponseEntity.ok(carEntity.get());
+            else return null;
         }).join();
-
     }
 
     @GetMapping("/getCars")
-    @Async
     public ResponseEntity<Iterable<CarEntity>> getCarsEntity () {
-        return CompletableFuture.supplyAsync(() -> {
-            Iterable<CarEntity> resultCars = carRepository.findAll().join();
-            return ResponseEntity.ok(resultCars);
+        return carRepository.findAll().thenApplyAsync((carsEntity) -> {
+            return ResponseEntity.ok(carsEntity);
         }).join();
     }
 
     @PostMapping("/addCar")
-    @Async
     public ResponseEntity<String> createCar (@RequestBody CarEntity carEntity) {
-        return CompletableFuture.supplyAsync(() -> {
-            carRepository.save(carEntity);
-            return ResponseEntity.ok("Car has been added successfully");
+        return carRepository.save(carEntity).thenApplyAsync((car) -> {
+            return ResponseEntity.ok(car.getNumber() + "Car has been added successfully");
         }).join();
     }
 
     @GetMapping("/deleteCar/{id}")
-    @Async
     public ResponseEntity<String> deleteCar (@PathVariable Long id) {
         return CompletableFuture.supplyAsync(() -> {
             carRepository.deleteById(id);
             return (ResponseEntity.ok("Car deleted successfully"));
+        }).join();
+    }
+
+    @GetMapping("/getCar/{id1}/{id2}")
+    public ResponseEntity<List> getCarEntities (@PathVariable Long id1, @PathVariable Long id2) {
+        return carRepository.findAllById(new ArrayList<Long>(){{
+                add(id1);
+                add(id2);
+            }}).thenApplyAsync((carEntities) -> {
+            List carList = new ArrayList<>();
+            for (CarEntity carEntity: carEntities) {
+                carList.add(carEntities);
+            }
+            return ResponseEntity.ok(carList);
         }).join();
     }
 }
