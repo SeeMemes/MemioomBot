@@ -24,7 +24,7 @@ public class CommandList {
 
     @PostConstruct
     private void setUserEntities () {
-        userEntities = (ArrayList<UserEntity>) userRepository.findAll();
+        userEntities = (ArrayList<UserEntity>) userRepository.findAll().join();
     }
 
     protected void addUserToBlackList(SlashCommandInteractionEvent event) {

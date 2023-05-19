@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="346b7138-c914-455a-81f7-98f2b2cda977" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/memioombot/backend/database/ydbdriver/annotations/YdbStorage.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs/application.2023-05-11.0.log.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs/application.2023-05-12.0.log.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs/application.2023-05-13.0.log.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/memioombot/backend/database/repositories/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/memioombot/backend/database/repositories/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/memioombot/backend/example/CarController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/memioombot/backend/example/CarController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/memioombot/backend/database/repositories/UserRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/memioombot/backend/database/repositories/UserRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/memioombot/backend/example/CarController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/memioombot/backend/example/CarController.class" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CodeStyleSettingsInfer">
+    <option name="done" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+        <option value="AnnotationType" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHome" value="Use Maven wrapper" />
+        <option name="useMavenConfig" value="true" />
+      </MavenGeneralSettings>
+    </option>
+    <option name="importingSettings">
+      <MavenImportingSettings>
+        <option name="workspaceImportEnabled" value="true" />
+      </MavenImportingSettings>
+    </option>
+  </component>
+  <component name="ProjectCodeStyleSettingsMigration">
+    <option name="version" value="2" />
+  </component>
+  <component name="ProjectId" id="2Pbi90EEV1udsXVrNIrM5TSRvEI" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_opened_file_path": "C:/Users/User/Desktop/MemioomBot",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "spring.configuration.checksum": "fabcaa97871555b68aa095335975e613",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="MemioomBot" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="MemioomBot" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SpringApp" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="bot" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="memioombot.backend.SpringApp" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="346b7138-c914-455a-81f7-98f2b2cda977" name="Changes" comment="" />
+      <created>1683732029638</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1683732029638</updated>
+      <workItem from="1683732032956" duration="1058000" />
+      <workItem from="1683733157712" duration="1305000" />
+      <workItem from="1683736365546" duration="4784000" />
+      <workItem from="1683755864541" duration="15000" />
+      <workItem from="1683756072128" duration="468000" />
+      <workItem from="1683756620841" duration="9732000" />
+      <workItem from="1683801552681" duration="5444000" />
+      <workItem from="1683892761447" duration="1216000" />
+      <workItem from="1683986777715" duration="8347000" />
+      <workItem from="1684182459216" duration="5797000" />
+      <workItem from="1684244403632" duration="5600000" />
+      <workItem from="1684276043872" duration="6042000" />
+      <workItem from="1684323858101" duration="6995000" />
+      <workItem from="1684436654174" duration="10270000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

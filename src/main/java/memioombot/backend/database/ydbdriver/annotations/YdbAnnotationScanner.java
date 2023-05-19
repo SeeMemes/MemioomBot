@@ -48,7 +48,7 @@ public class YdbAnnotationScanner {
             }
             if (!primaryKeyName.isEmpty()) {
                 YdbEntity annotation = entityClass.getAnnotation(YdbEntity.class);
-                String tableName = annotation.dbName().isEmpty() ? entityClass.getSimpleName() : annotation.dbName();
+                String tableName = annotation.dbName().isEmpty() ? entityClass.getSimpleName().toLowerCase() : annotation.dbName().toLowerCase();
                 this.database.put(entityClassName, tableName);
                 this.fieldsMap.put(tableName, fields);
                 this.primaryKeys.put(tableName, primaryKey);

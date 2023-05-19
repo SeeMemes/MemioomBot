@@ -2,9 +2,11 @@ package memioombot.backend.database.ydbdriver.repository;
 
 import memioombot.backend.database.ydbdriver.config.YdbDatabaseInfo;
 import memioombot.backend.database.ydbdriver.util.PrimitiveTranslator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.NoRepositoryBean;
+import org.springframework.scheduling.annotation.Async;
 import tech.ydb.core.Result;
 import tech.ydb.table.SessionRetryContext;
 import tech.ydb.table.query.DataQueryResult;
@@ -19,7 +21,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @NoRepositoryBean
-public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
+public abstract class YdbRepository<T, ID> {
     @Autowired
     private YdbDatabaseInfo ydbDatabaseInfo;
     @Autowired
@@ -27,9 +29,11 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
     private String entityTypeName;
     private Class<?> entityClass;
     private Field primaryKey;
+    private String primaryKeyName;
     private Field[] fields;
     private String database;
     private final TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
+    private static Logger log = LoggerFactory.getLogger(YdbRepository.class);
 
 
     @PostConstruct
@@ -42,11 +46,12 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
         this.database = ydbDatabaseInfo.getDatabase(entityTypeName);
         this.fields = ydbDatabaseInfo.getFields(database);
         this.primaryKey = ydbDatabaseInfo.getPrimaryKey(database);
+        this.primaryKeyName = this.primaryKey.getName();
         this.primaryKey.setAccessible(true);
     }
 
-    @Override
-    public <S extends T> S save(S entity) {
+    @Async
+    public <S extends T> CompletableFuture<S> save(S entity) {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newClassBuilder(database)
                     .declareVariables(entity)
@@ -56,17 +61,17 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
 
             CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
-            return futureResult.thenApply(result -> {
+            return futureResult.thenApplyAsync(result -> {
                 if (result.isSuccess()) return entity;
                 else return null;
-            }).join();
+            });
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to save entity", e);
         }
     }
 
-    @Override
-    public <S extends T> Iterable<S> saveAll(Iterable<S> entities) {
+    @Async
+    public <S extends T> CompletableFuture<Iterable<S>> saveAll(Iterable<S> entities) {
         try {
             List<S> savedEntities = new ArrayList<>();
             QueryBuilder.ClassBuilder classBuilder = QueryBuilder.newClassBuilder(database);
@@ -81,59 +86,59 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
 
             CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
-            return futureResult.thenApply(result -> {
+            return futureResult.thenApplyAsync(result -> {
                 if (result.isSuccess()) return savedEntities;
                 else return null;
-            }).join();
+            });
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to save all entities by id", e);
         }
     }
 
-    @Override
-    public Optional<T> findById(ID id) {
+    @Async
+    public CompletableFuture<Optional<T>> findById(ID id) {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
-                    .declareVariables(id, "uId")
+                    .declareVariables(id, this.primaryKeyName)
                     .addCommand("SELECT * FROM")
                     .variablesIn()
                     .build();
 
             CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
-            return (Optional<T>) futureResult.thenApply(result -> {
+            return futureResult.thenApplyAsync(result -> {
                 ResultSetReader rs = result.getValue().getResultSet(0);
-                if (result.isSuccess()) {
+                if (result.isSuccess() && rs.next()) {
                     return Optional.of(createEntity(rs));
                 } else {
                     return Optional.empty();
                 }
-            }).join();
+            });
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to find entity by id", e);
         }
     }
 
-    @Override
-    public boolean existsById(ID id) {
+    @Async
+    public CompletableFuture<Boolean> existsById(ID id) {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
-                    .declareVariables(id, "uId")
+                    .declareVariables(id, this.primaryKeyName)
                     .addCommand("SELECT COUNT(*) FROM")
                     .variablesIn()
                     .build();
 
             CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
-            return futureResult.thenApply(result ->
-                    result.getValue().getResultSet(0).getRowCount() > 0).join();
+            return futureResult.thenApplyAsync(result ->
+                    result.getValue().getResultSet(0).getRowCount() > 0);
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to determine entity by id", e);
         }
     }
 
-    @Override
-    public Iterable<T> findAll() {
+    @Async
+    public CompletableFuture<Iterable<T>> findAll() {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
                     .addCommand("SELECT * FROM")
@@ -141,26 +146,26 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
 
             CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl));
-            return futureResult.thenApply(result -> {
+            return futureResult.thenApplyAsync(result -> {
                 ResultSetReader rs = result.getValue().getResultSet(0);
                 List<T> Entities = new ArrayList<>();
                 while (rs.next()) {
                     Entities.add(createEntity(rs));
                 }
                 return Entities;
-            }).join();
-        } catch (IllegalAccessException e) {
+            });
+        } catch (Exception e) {
             throw new RuntimeException("Failed to find all entities", e);
         }
     }
 
-    @Override
-    public Iterable<T> findAllById(Iterable<ID> ids) {
+    @Async
+    public CompletableFuture<Iterable<T>> findAllById(Iterable<ID> ids) {
         try {
             QueryBuilder.SingleParamBuilder singleParamBuilder = QueryBuilder.newSingleParamBuilder(database);
             for (ID id : ids) {
                 singleParamBuilder
-                        .declareVariables(id, "uId");
+                        .declareVariables(id, this.primaryKeyName);
             }
             singleParamBuilder
                     .addCommand("SELECT * FROM")
@@ -169,21 +174,21 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
 
             CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl, queryBuilder.getParams()));
-            return futureResult.thenApply(result -> {
+            return futureResult.thenApplyAsync(result -> {
                 ResultSetReader rs = result.getValue().getResultSet(0);
                 List<T> Entities = new ArrayList<>();
                 while (rs.next()) {
                     Entities.add(createEntity(rs));
                 }
                 return Entities;
-            }).join();
+            });
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to find all entities by id", e);
         }
     }
 
-    @Override
-    public long count() {
+    @Async
+    public CompletableFuture<Long> count() {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
                     .addCommand("SELECT COUNT(*) FROM")
@@ -191,20 +196,21 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
 
             CompletableFuture<Result<DataQueryResult>> futureResult = sessionRetryContext.supplyResult(session ->
                     session.executeDataQuery(queryBuilder.getQuery(), txControl));
-            return futureResult.thenApply(result -> {
+            return futureResult.thenApplyAsync(result -> {
                 ResultSetReader rs = result.getValue().getResultSet(0);
-                return rs.getColumn("column0").getUint64();
-            }).join();
+                if (rs.next()) return rs.getColumn("column0").getUint64();
+                else return new Long(0);
+            });
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to count entities", e);
         }
     }
 
-    @Override
+    @Async
     public void deleteById(ID id) {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
-                    .declareVariables(id, "uId")
+                    .declareVariables(id, this.primaryKeyName)
                     .addCommand("DELETE FROM")
                     .variablesIn()
                     .build();
@@ -216,7 +222,7 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
         }
     }
 
-    @Override
+    @Async
     public void delete(T entity) {
         try {
             deleteById(getId(entity));
@@ -226,13 +232,13 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
         }
     }
 
-    @Override
+    @Async
     public void deleteAllById(Iterable<? extends ID> ids) {
         try {
             QueryBuilder.SingleParamBuilder singleParamBuilder = QueryBuilder.newSingleParamBuilder(database);
             for (ID id : ids) {
                 singleParamBuilder
-                        .declareVariables(id, "uId");
+                        .declareVariables(id, this.primaryKeyName);
             }
             singleParamBuilder
                     .addCommand("DELETE FROM")
@@ -247,7 +253,7 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
 
     }
 
-    @Override
+    @Async
     public void deleteAll(Iterable<? extends T> entities) {
         List<ID> IDs = new ArrayList<>();
         for (T entity : entities) {
@@ -261,7 +267,7 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
         deleteAllById(IDs);
     }
 
-    @Override
+    @Async
     public void deleteAll() {
         try {
             QueryBuilder queryBuilder = QueryBuilder.newSingleParamBuilder(database)
@@ -281,7 +287,7 @@ public abstract class YdbRepository<T, ID> implements CrudRepository<T, ID> {
         return (ID) fieldValue;
     }
 
-    public T createEntity(ResultSetReader rs) {
+    private T createEntity(ResultSetReader rs) {
         try {
             T entity = (T) entityClass.newInstance();
             for (Field field : fields) {
