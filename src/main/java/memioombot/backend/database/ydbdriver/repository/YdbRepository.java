@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 public abstract class YdbRepository<T, ID> {
     @Autowired
     private YdbDatabaseInfo ydbDatabaseInfo;
+
     @Autowired
     private SessionRetryContext sessionRetryContext;
     private String entityTypeName;
@@ -31,7 +32,9 @@ public abstract class YdbRepository<T, ID> {
     private Field primaryKey;
     private String primaryKeyName;
     private Field[] fields;
+
     private String database;
+
     private final TxControl<TxControl.TxSerializableRw> txControl = TxControl.serializableRw().setCommitTx(true);
     private static Logger log = LoggerFactory.getLogger(YdbRepository.class);
 
@@ -287,7 +290,7 @@ public abstract class YdbRepository<T, ID> {
         return (ID) fieldValue;
     }
 
-    private T createEntity(ResultSetReader rs) {
+    public T createEntity(ResultSetReader rs) {
         try {
             T entity = (T) entityClass.newInstance();
             for (Field field : fields) {
@@ -299,5 +302,17 @@ public abstract class YdbRepository<T, ID> {
         } catch (Exception e) {
             throw new RuntimeException("Failed to create entity", e);
         }
+    }
+
+    public String getDatabase() {
+        return database;
+    }
+
+    public SessionRetryContext getSessionRetryContext() {
+        return sessionRetryContext;
+    }
+
+    public TxControl<TxControl.TxSerializableRw> getTxControl() {
+        return txControl;
     }
 }

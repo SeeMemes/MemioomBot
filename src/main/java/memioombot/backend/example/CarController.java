@@ -28,6 +28,11 @@ public class CarController {
         }).join();
     }
 
+    @GetMapping("/getCarByNum/{number}")
+    public ResponseEntity<CarEntity> getCarEntity (@PathVariable String number) {
+        return ResponseEntity.ok(carRepository.selectCarByNumber(number));
+    }
+
     @GetMapping("/getCars")
     public ResponseEntity<Iterable<CarEntity>> getCarsEntity () {
         return carRepository.findAll().thenApplyAsync((carsEntity) -> {
